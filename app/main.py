@@ -2,21 +2,19 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from .database import Base, SessionLocal, engine
 from .routers import cards, collection, market, users
 from .seed import seed_database
 
-# Render/Linux slim a menudo no mapea .css/.js y el browser los bloquea como text/plain
 mimetypes.add_type("text/css", ".css")
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/javascript", ".js")
-mimetypes.add_type("image/svg+xml", ".svg")
 
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
 
 
 @asynccontextmanager
@@ -40,28 +38,40 @@ app.include_router(market.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "app": "TCG Trade"}
+    return {
+        "status": "ok",
+        "app": "TCG Trade",
+        "static_dir": str(STATIC_DIR),
+        "static_exists": STATIC_DIR.exists(),
+        "files": sorted(p.name for p in STATIC_DIR.glob("*")) if STATIC_DIR.exists() else [],
+    }
 
 
-def _static_file(name: str, media_type: str) -> FileResponse:
-    path = STATIC_DIR / name
+def serve_static(filename: str, media_type: str) -> FileResponse:
+    path = STATIC_DIR / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"No encontrado: {filename} en {STATIC_DIR}")
     return FileResponse(path, media_type=media_type)
 
 
 @app.get("/")
 def index():
-    return _static_file("index.html", "text/html; charset=utf-8")
+    return serve_static("index.html", "text/html; charset=utf-8")
+
+
+@app.head("/")
+def index_head():
+    path = STATIC_DIR / "index.html"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="index.html missing")
+    return FileResponse(path, media_type="text/html; charset=utf-8")
 
 
 @app.get("/static/styles.css")
 def styles_css():
-    return _static_file("styles.css", "text/css; charset=utf-8")
+    return serve_static("styles.css", "text/css; charset=utf-8")
 
 
 @app.get("/static/app.js")
 def app_js():
-    return _static_file("app.js", "application/javascript; charset=utf-8")
-
-
-if STATIC_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    return serve_static("app.js", "application/javascript; charset=utf-8")
