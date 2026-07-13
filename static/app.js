@@ -10,6 +10,7 @@ const USER_KEY = "tcg_user";
 const NAV_ITEMS = [
   { id: "home", label: "Inicio", icon: "🏠" },
   { id: "scan", label: "Escanear", icon: "⊞" },
+  { id: "catalog", label: "Catálogo", icon: "📚" },
   { id: "market", label: "Mercado", icon: "🛍" },
   { id: "profile", label: "Perfil", icon: "👤" },
 ];
@@ -28,6 +29,7 @@ const state = {
   previewUrl: null,
   toastTimer: null,
   loading: false,
+  catalogCards: null,
 };
 
 const app = document.getElementById("app");
@@ -313,6 +315,21 @@ function renderCollection() {
   `;
 }
 
+function catalogListHtml(cards) {
+  if (!cards.length) return '<li class="empty-state">No se encontraron cartas.</li>';
+  return cards.map(scanItemHtml).join("");
+}
+
+function renderCatalog() {
+  const cards = state.catalogCards || [];
+  return `
+    <h2 class="page-title">Catálogo</h2>
+    <p class="page-sub">${cards.length} cartas · One Piece OP-01</p>
+    <input class="auth-input" id="catalog-search" placeholder="Buscar por nombre, set o rareza..." style="width:100%;margin-bottom:0.75rem" />
+    <ul class="scan-list" id="catalog-list">${catalogListHtml(cards)}</ul>
+  `;
+}
+
 function renderMarket() {
   const listings = (state.listings || [])
     .map((l) => {
@@ -459,6 +476,7 @@ function render() {
   const screens = {
     home: renderHome,
     scan: renderScan,
+    catalog: renderCatalog,
     collection: renderCollection,
     market: renderMarket,
     profile: renderProfile,
@@ -482,6 +500,16 @@ async function loadHomeData() {
     } catch {
       state.collection = null;
     }
+  }
+}
+
+async function loadCatalog() {
+  if (state.catalogCards) return;
+  try {
+    state.catalogCards = await api("/cards");
+  } catch (e) {
+    state.catalogCards = [];
+    showToast(e.message);
   }
 }
 
@@ -515,6 +543,7 @@ async function navigate(screen) {
   }
   try {
     if (screen === "home") await loadHomeData();
+    if (screen === "catalog") await loadCatalog();
     if (screen === "market") await loadMarket();
     if (screen === "collection") await loadCollection();
     if (screen === "profile" && isLoggedIn()) await loadStats();
@@ -551,6 +580,19 @@ async function runScan() {
     showToast(e.message);
   }
   render();
+}
+
+async function openCardDetail(cardId) {
+  try {
+    const card = await api(`/cards/${cardId}`);
+    state.screen = "scan";
+    state.activeCard = card;
+    state.scanPhase = "result";
+    state.scanMethod = "catalog";
+    render();
+  } catch (e) {
+    showToast(e.message);
+  }
 }
 
 async function requireAuth(actionLabel) {
@@ -657,17 +699,22 @@ function bindEvents() {
   });
 
   document.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
-    el.addEventListener("click", async () => {
-      try {
-        const card = await api(`/cards/${el.dataset.cardId}`);
-        state.screen = "scan";
-        state.activeCard = card;
-        state.scanPhase = "result";
-        state.scanMethod = "catalog";
-        render();
-      } catch (e) {
-        showToast(e.message);
-      }
+    el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
+  });
+
+  document.getElementById("catalog-search")?.addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const filtered = (state.catalogCards || []).filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.set_name.toLowerCase().includes(q) ||
+        c.rarity.toLowerCase().includes(q)
+    );
+    const list = document.getElementById("catalog-list");
+    if (!list) return;
+    list.innerHTML = catalogListHtml(filtered);
+    list.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
+      el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
     });
   });
 
