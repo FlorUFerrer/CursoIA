@@ -35,6 +35,10 @@ const state = {
   catalogCardsSetId: null,
   catalogCards: null,
   catalogLoading: false,
+  scanSearchSetId: null,
+  scanSearchQuery: "",
+  scanSearchCards: null,
+  scanSearchLoading: false,
 };
 
 const app = document.getElementById("app");
@@ -122,6 +126,78 @@ function showToast(msg) {
   state.toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
 }
 
+function fieldHtml(f) {
+  if (f.type === "select") {
+    const opts = (f.options || [])
+      .map((o) => `<option value="${o.value}"${o.value === f.value ? " selected" : ""}>${o.label}</option>`)
+      .join("");
+    return `
+      <label class="auth-label">${f.label}
+        <select class="auth-input" name="${f.name}">${opts}</select>
+      </label>`;
+  }
+  return `
+    <label class="auth-label">${f.label}
+      <input
+        class="auth-input"
+        name="${f.name}"
+        type="${f.type || "text"}"
+        placeholder="${f.placeholder || ""}"
+        value="${f.value != null ? f.value : ""}"
+        ${f.required ? "required" : ""}
+      />
+    </label>`;
+}
+
+/** Modal genérico en reemplazo de prompt()/alert(). Devuelve una Promise con
+ * los valores del form (por nombre de campo) o null si se cancela. */
+function openModal({ title, fields, confirmLabel = "Confirmar", cancelLabel = "Cancelar" }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="${title}">
+        <h3 class="modal-title">${title}</h3>
+        <form class="modal-form">
+          ${fields.map(fieldHtml).join("")}
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" data-modal-cancel>${cancelLabel}</button>
+            <button type="submit" class="btn btn-primary" data-modal-confirm>${confirmLabel}</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const onKeydown = (e) => {
+      if (e.key === "Escape") close(null);
+    };
+    document.addEventListener("keydown", onKeydown);
+
+    function close(result) {
+      document.removeEventListener("keydown", onKeydown);
+      overlay.remove();
+      resolve(result);
+    }
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close(null);
+    });
+    overlay.querySelector("[data-modal-cancel]").addEventListener("click", () => close(null));
+    overlay.querySelector(".modal-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const result = {};
+      fields.forEach((f) => {
+        result[f.name] = fd.get(f.name);
+      });
+      close(result);
+    });
+
+    overlay.querySelector(".auth-input")?.focus();
+  });
+}
+
 function logoHtml() {
   return `
     <div class="screen-header">
@@ -207,6 +283,56 @@ function renderHome() {
   `;
 }
 
+function renderScanSearch() {
+  const sets = state.catalogSets || [];
+  const setOptions = sets
+    .map(
+      (s) =>
+        `<option value="${s.set_id}"${s.set_id === state.scanSearchSetId ? " selected" : ""}>${s.set_id} · ${s.name}</option>`
+    )
+    .join("");
+
+  const query = (state.scanSearchQuery || "").toLowerCase();
+  const filtered = (state.scanSearchCards || []).filter(
+    (c) => !query || c.name.toLowerCase().includes(query) || c.rarity.toLowerCase().includes(query)
+  );
+
+  let listHtml;
+  if (!state.scanSearchSetId) {
+    listHtml = '<li class="empty-state">Seleccioná una temporada para ver las cartas.</li>';
+  } else if (state.scanSearchLoading) {
+    listHtml = '<li class="empty-state">Cargando cartas…</li>';
+  } else if (!filtered.length) {
+    listHtml = '<li class="empty-state">Sin resultados. Probá otro nombre.</li>';
+  } else {
+    listHtml = filtered.map(scanItemHtml).join("");
+  }
+
+  return `
+    <div class="action-row" style="margin-bottom:0.75rem">
+      <button class="btn btn-outline btn-action-row" id="btn-search-back">
+        ${icon("arrow-left", "btn-icon")}
+        Volver
+      </button>
+    </div>
+    <h2 class="page-title">Buscar carta</h2>
+    <p class="page-sub">Elegí la temporada y buscá por nombre</p>
+    <label class="auth-label" style="display:block;margin-bottom:0.5rem">Temporada / Set
+      <select class="auth-input" id="scan-search-set">
+        <option value="">— Seleccioná una temporada —</option>
+        ${setOptions}
+      </select>
+    </label>
+    <div class="search-box" style="margin-bottom:0.75rem">
+      ${icon("search", "search-icon")}
+      <input class="auth-input search-input" id="scan-search-input"
+             placeholder="Nombre de la carta…"
+             value="${state.scanSearchQuery || ""}" />
+    </div>
+    <ul class="scan-list" id="scan-search-list">${listHtml}</ul>
+  `;
+}
+
 function renderScanIdle() {
   const preview = state.previewUrl
     ? `<img src="${state.previewUrl}" alt="Vista previa" class="scan-preview" />`
@@ -214,11 +340,6 @@ function renderScanIdle() {
   return `
     <h2 class="page-title">Escanear carta</h2>
     <p class="page-sub">IA de visión · Gratis · Sin registro</p>
-    <div class="search-box" style="margin-bottom:0.5rem">
-      ${icon("search", "search-icon")}
-      <input class="auth-input search-input" id="scan-search" placeholder="O buscá una carta por nombre (catálogo)..." />
-    </div>
-    <ul class="scan-list" id="scan-search-results"></ul>
     <div class="viewfinder" id="viewfinder">
       <div class="viewfinder-corner tl"></div>
       <div class="viewfinder-corner tr"></div>
@@ -235,6 +356,10 @@ function renderScanIdle() {
       <button class="btn btn-primary btn-action-row" id="btn-run-scan">
         ${icon("scan-line", "btn-icon")}
         Escanear
+      </button>
+      <button class="btn btn-outline btn-action-row" id="btn-open-search">
+        ${icon("search", "btn-icon")}
+        Buscar
       </button>
     </div>
     <p class="page-sub" style="font-size:0.75rem;margin:0">
@@ -286,6 +411,7 @@ function renderScanResult(card) {
 }
 
 function renderScan() {
+  if (state.scanPhase === "search") return renderScanSearch();
   if (state.scanPhase === "result" && state.activeCard) return renderScanResult(state.activeCard);
   if (state.scanPhase === "scanning") {
     return `
@@ -650,7 +776,10 @@ async function navigate(screen) {
   state.screen = screen;
   if (screen !== "scan") {
     state.scanPhase = "idle";
-    if (screen !== "scan") state.activeCard = null;
+    state.activeCard = null;
+    state.scanSearchSetId = null;
+    state.scanSearchCards = null;
+    state.scanSearchQuery = "";
   }
   try {
     if (screen === "home") await loadHomeData();
@@ -726,29 +855,55 @@ function bindEvents() {
     render();
   });
 
-  document.getElementById("scan-search")?.addEventListener("input", (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    const results = document.getElementById("scan-search-results");
-    if (!results) return;
-    if (!q) {
-      results.innerHTML = "";
-      return;
+  document.getElementById("btn-open-search")?.addEventListener("click", async () => {
+    state.scanPhase = "search";
+    state.scanSearchQuery = "";
+    render();
+    if (!state.catalogSets) await loadCatalogSets();
+    render();
+  });
+
+  document.getElementById("btn-search-back")?.addEventListener("click", () => {
+    state.scanPhase = "idle";
+    render();
+  });
+
+  document.getElementById("scan-search-set")?.addEventListener("change", async (e) => {
+    const setId = e.target.value;
+    state.scanSearchSetId = setId || null;
+    state.scanSearchQuery = "";
+    state.scanSearchCards = null;
+    if (!setId) { render(); return; }
+    state.scanSearchLoading = true;
+    render();
+    try {
+      state.scanSearchCards = await api(`/cards?set_id=${encodeURIComponent(setId)}`);
+    } catch {
+      state.scanSearchCards = [];
     }
-    const matches = (state.catalogCards || [])
-      .filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.set_name.toLowerCase().includes(q) ||
-          c.rarity.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-    results.innerHTML = matches.length
-      ? matches.map(scanItemHtml).join("")
-      : '<li class="empty-state">Sin resultados en el set actual del catálogo.</li>';
-    results.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
+    state.scanSearchLoading = false;
+    render();
+  });
+
+  document.getElementById("scan-search-input")?.addEventListener("input", (e) => {
+    state.scanSearchQuery = e.target.value;
+    const query = state.scanSearchQuery.toLowerCase();
+    const filtered = (state.scanSearchCards || []).filter(
+      (c) => !query || c.name.toLowerCase().includes(query) || c.rarity.toLowerCase().includes(query)
+    );
+    const list = document.getElementById("scan-search-list");
+    if (!list) return;
+    list.innerHTML = filtered.length
+      ? filtered.map(scanItemHtml).join("")
+      : '<li class="empty-state">Sin resultados. Probá otro nombre.</li>';
+    list.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
       el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
     });
     refreshIcons();
+  });
+
+  document.getElementById("scan-search-list")?.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
+    el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
   });
 
   document.getElementById("btn-pick-photo")?.addEventListener("click", () => {
@@ -772,6 +927,10 @@ function bindEvents() {
       await api(`/collection/${state.activeCard.id}`, { method: "POST" });
       showToast("Carta guardada en tu colección");
       await loadCollection();
+      state.scanPhase = "idle";
+      state.activeCard = null;
+      state.scanMethod = null;
+      render();
     } catch (e) {
       showToast(e.message);
     }
@@ -779,16 +938,40 @@ function bindEvents() {
 
   document.getElementById("btn-publish")?.addEventListener("click", async () => {
     if (!(await requireAuth("publicar"))) return;
+    const result = await openModal({
+      title: "Publicar carta",
+      confirmLabel: "Publicar",
+      fields: [
+        {
+          name: "type",
+          label: "Tipo de publicación",
+          type: "select",
+          value: "sale",
+          options: [
+            { value: "sale", label: "Venta" },
+            { value: "trade", label: "Intercambio" },
+            { value: "negotiable", label: "Negociable" },
+            { value: "combo", label: "Combo" },
+          ],
+        },
+        {
+          name: "wants",
+          label: "Cartas que buscás a cambio",
+          type: "text",
+          placeholder: "Opcional · solo para intercambio o combo",
+        },
+      ],
+    });
+    if (!result) return;
     try {
-      const type = prompt("Tipo: sale / trade / negotiable / combo", "sale") || "sale";
-      const wants = type === "trade" || type === "combo" ? prompt("¿Qué cartas buscás a cambio?", "") : null;
+      const wants = result.type === "trade" || result.type === "combo" ? result.wants || null : null;
       await api("/market/listings", {
         method: "POST",
         json: {
           card_id: state.activeCard.id,
-          listing_type: type,
+          listing_type: result.type,
           price: state.activeCard.price,
-          wants: wants || null,
+          wants,
           featured: false,
         },
       });
@@ -891,14 +1074,21 @@ function bindEvents() {
     el.addEventListener("click", async (ev) => {
       ev.stopPropagation();
       if (!(await requireAuth("ofertar"))) return;
-      const money = prompt("Oferta en dinero (ARS, opcional)", "");
-      const cardsOffer = prompt("Cartas a ofrecer (texto, opcional)", "");
+      const result = await openModal({
+        title: "Hacer una oferta",
+        confirmLabel: "Ofertar",
+        fields: [
+          { name: "money", label: "Oferta en dinero (ARS)", type: "number", placeholder: "Opcional" },
+          { name: "cardsOffer", label: "Cartas a ofrecer", type: "text", placeholder: "Opcional" },
+        ],
+      });
+      if (!result) return;
       try {
         await api(`/market/listings/${el.dataset.offer}/offers`, {
           method: "POST",
           json: {
-            money_offer: money ? Number(money) : null,
-            cards_offer: cardsOffer || null,
+            money_offer: result.money ? Number(result.money) : null,
+            cards_offer: result.cardsOffer || null,
           },
         });
         showToast("Oferta enviada");
@@ -912,15 +1102,26 @@ function bindEvents() {
     el.addEventListener("click", async () => {
       const action = el.dataset.action;
       if (action === "publish-tournament") {
-        const title = prompt("Nombre del torneo:", "");
-        if (!title) return;
-        const description = prompt("Descripción (opcional):", "") || null;
-        const eventDate = prompt("Fecha del evento (YYYY-MM-DD, opcional):", "") || null;
-        const location = prompt("Lugar (opcional):", "") || null;
+        const result = await openModal({
+          title: "Publicar torneo",
+          confirmLabel: "Publicar",
+          fields: [
+            { name: "title", label: "Nombre del torneo", type: "text", required: true },
+            { name: "description", label: "Descripción", type: "text", placeholder: "Opcional" },
+            { name: "event_date", label: "Fecha del evento", type: "date" },
+            { name: "location", label: "Lugar", type: "text", placeholder: "Opcional" },
+          ],
+        });
+        if (!result) return;
         try {
           await api("/tournaments", {
             method: "POST",
-            json: { title, description, event_date: eventDate, location },
+            json: {
+              title: result.title,
+              description: result.description || null,
+              event_date: result.event_date || null,
+              location: result.location || null,
+            },
           });
           showToast("¡Torneo publicado! Ya aparece en el Mercado para todos los usuarios.");
           await navigate("market");

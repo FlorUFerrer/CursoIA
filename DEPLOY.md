@@ -1,4 +1,4 @@
-# Guía de deploy — TCG Trade en Render
+# Guía de deploy — TCG Trade en Railway
 
 ## 1. GitHub
 
@@ -7,7 +7,7 @@ En la carpeta del proyecto:
 ```bash
 git init
 git add .
-git commit -m "TCG Trade: FastAPI + SQLite listo para Render"
+git commit -m "TCG Trade: FastAPI + SQLite listo para Railway"
 ```
 
 Creá un repo vacío en GitHub (sin README) y:
@@ -18,32 +18,40 @@ git branch -M main
 git push -u origin main
 ```
 
-## 2. Render
+Si ya tenés el repo conectado (como este), simplemente `git push`.
 
-1. Entrá a https://dashboard.render.com y creá cuenta (podés con GitHub).
-2. **New** → **Web Service** → conectá el repo `tcg-trade`.
-3. Settings:
-   - **Name**: `tcg-trade`
-   - **Runtime**: Python
-   - **Build Command**: `pip install -r requirements.txt`
+## 2. Railway
+
+1. Entrá a https://railway.app y creá cuenta (podés con GitHub).
+2. **New Project** → **Deploy from GitHub repo** → elegí el repo.
+3. Railway detecta Python automáticamente (Nixpacks) e instala `requirements.txt` solo.
+4. En la pestaña **Settings** del servicio, en **Deploy**:
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - **Instance type**: Free
-4. Environment (opcional):
+5. En **Variables** (opcional):
    - `SECRET_KEY` = cualquier string largo aleatorio
    - `OPENAI_API_KEY` = solo si querés IA real en el escaneo
-5. **Create Web Service** y esperá el deploy (~2–5 min).
-6. Abrí la URL tipo `https://tcg-trade-xxxx.onrender.com`
+6. Railway asigna una URL pública en **Settings → Networking → Generate Domain** (tipo `https://tcg-trade-production-xxxx.up.railway.app`).
+7. Cada `git push` a la rama conectada dispara un redeploy automático.
 
-Alternativa: **New** → **Blueprint** y usá el `render.yaml` del repo.
+## 3. Persistencia de la base (opcional)
 
-## 3. Verificación
+Por defecto el filesystem de Railway es efímero como en cualquier PaaS: `data/tcg_trade.db` se recrea en cada redeploy (el seed vuelve a cargar cartas, usuarios demo, torneo y publicaciones). Si querés que la base sobreviva a los redeploys:
+
+1. En el servicio → **Settings → Volumes** → **Add Volume**.
+2. Mount path: `/app/data` (o la ruta donde corra el proyecto dentro del contenedor).
+3. Redeployá — a partir de ahí `data/tcg_trade.db` persiste entre despliegues.
+
+## 4. Verificación
 
 - Home carga la app.
 - `/api/health` responde `{"status":"ok"}`.
-- Login con `demo` / `demo123`.
+- Login con `usuario` / `usuario123` (premium), `tienda` / `tienda123` (tienda) u `otrousuario` / `otrousuario123`.
 - Escaneo → Guardar → Publicar → Ofertar.
+- Catálogo lista cartas reales de One Piece TCG (trae el set más reciente al primer arranque).
+- Mercado muestra el torneo pre-cargado por `tienda`.
 
-## Notas free tier
+## Notas del plan gratuito
 
-- Cold start: la primera visita tras dormir puede tardar 30–60 s.
-- SQLite se resetea en redeploy; el seed recrea cartas y usuarios demo.
+- Railway da un crédito mensual gratis (plan Trial/Hobby); revisá los límites vigentes en tu dashboard, ya que pueden cambiar.
+- Sin un Volume (paso 3), el SQLite se resetea en cada redeploy; el seed recrea cartas, usuarios y datos demo automáticamente.
+- A diferencia de Render free, Railway no duerme la instancia por inactividad en los planes pagos/Hobby — confirmá el comportamiento del plan que tengas activo.

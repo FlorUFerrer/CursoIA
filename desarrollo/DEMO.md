@@ -62,7 +62,7 @@ uvicorn app.main:app --reload
 
 1. (Con sesión de `tienda` activa) Navegá a **Perfil**.
 2. En el menú aparece **Publicar Torneo** (solo visible para cuentas tienda).
-3. Completá los prompts: nombre, descripción, fecha (YYYY-MM-DD), lugar.
+3. Completá el formulario del modal: nombre, descripción, fecha (selector nativo) y lugar.
 4. Confirmá → aparece el mensaje "¡Torneo publicado!".
 5. Navegá a **Mercado** → el torneo aparece en la sección "🏆 Torneos activos".
 
