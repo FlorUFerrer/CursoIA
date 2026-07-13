@@ -3,7 +3,7 @@ import random
 from sqlalchemy.orm import Session, joinedload
 
 from .auth import hash_password
-from .models import Card, Listing, PriceHistory, User
+from .models import Card, Listing, PriceHistory, Tournament, User
 from .optcg_client import DEFAULT_SET_ID, fetch_all_sets, fetch_set_cards
 from .pricing import USD_ARS_RATE
 
@@ -99,15 +99,44 @@ def _pick_default_set_id() -> str:
     return DEFAULT_SET_ID
 
 
-def seed_database(db: Session) -> None:
-    if db.query(Card).count() > 0:
-        return
+_DEMO_USERS = [
+    # (username, password, is_premium, is_store)
+    ("demo", "demo123", False, False),
+    ("ColeccionAR", "demo123", False, False),
+    ("TCG_BA", "demo123", False, False),
+    ("usuario", "usuario123", True, False),
+    ("otrousuario", "otrousuario123", False, False),
+    ("tienda", "tienda123", False, True),
+]
 
-    demo = User(username="demo", password_hash=hash_password("demo123"))
-    seller = User(username="ColeccionAR", password_hash=hash_password("demo123"))
-    seller2 = User(username="TCG_BA", password_hash=hash_password("demo123"))
-    db.add_all([demo, seller, seller2])
+
+def _ensure_demo_users(db: Session) -> dict[str, User]:
+    """Crea o actualiza los usuarios demo. Se ejecuta siempre (idempotente)."""
+    users: dict[str, User] = {}
+    for username, password, is_premium, is_store in _DEMO_USERS:
+        u = db.query(User).filter(User.username == username).first()
+        if not u:
+            u = User(
+                username=username,
+                password_hash=hash_password(password),
+                is_premium=is_premium,
+                is_store=is_store,
+            )
+            db.add(u)
+        else:
+            u.is_premium = is_premium
+            u.is_store = is_store
+        users[username] = u
     db.flush()
+    return users
+
+
+def seed_database(db: Session) -> None:
+    users = _ensure_demo_users(db)
+
+    if db.query(Card).count() > 0:
+        db.commit()
+        return
 
     default_set_id = _pick_default_set_id()
     try:
@@ -116,11 +145,11 @@ def seed_database(db: Session) -> None:
         # Ultimo respaldo: OP-01 siempre tiene snapshot local, no depende de red.
         cards = ensure_set_cards(db, DEFAULT_SET_ID)
 
-    top = sorted(cards, key=lambda c: c.price, reverse=True)[:3]
+    top = sorted(cards, key=lambda c: c.price, reverse=True)[:4]
     if len(top) >= 3:
         db.add(
             Listing(
-                seller_id=seller.id,
+                seller_id=users["ColeccionAR"].id,
                 card_id=top[0].id,
                 listing_type="sale",
                 price=top[0].price,
@@ -130,7 +159,7 @@ def seed_database(db: Session) -> None:
         )
         db.add(
             Listing(
-                seller_id=seller2.id,
+                seller_id=users["TCG_BA"].id,
                 card_id=top[1].id,
                 listing_type="trade",
                 price=None,
@@ -141,7 +170,7 @@ def seed_database(db: Session) -> None:
         )
         db.add(
             Listing(
-                seller_id=seller.id,
+                seller_id=users["ColeccionAR"].id,
                 card_id=top[2].id,
                 listing_type="combo",
                 price=top[2].price,
@@ -150,4 +179,30 @@ def seed_database(db: Session) -> None:
                 status="active",
             )
         )
-        db.commit()
+    # Publicacion de tienda — carta que usuario puede ver y ofertar
+    if len(top) >= 4:
+        db.add(
+            Listing(
+                seller_id=users["tienda"].id,
+                card_id=top[3].id,
+                listing_type="sale",
+                price=top[3].price,
+                featured=True,
+                status="active",
+            )
+        )
+
+    # Torneo pre-cargado publicado por tienda
+    if not db.query(Tournament).filter(Tournament.organizer_id == users["tienda"].id).first():
+        db.add(
+            Tournament(
+                organizer_id=users["tienda"].id,
+                title="Gran Torneo One Piece TCG — Julio 2026",
+                description="Torneo abierto a todos los niveles. Formato best-of-3. Premios para los 3 primeros puestos.",
+                event_date="2026-07-26",
+                location="Tienda TCG — Buenos Aires, Argentina",
+                status="active",
+            )
+        )
+
+    db.commit()

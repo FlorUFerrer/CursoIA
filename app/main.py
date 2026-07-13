@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
 from .database import Base, SessionLocal, engine
-from .routers import cards, collection, market, users
+from .routers import cards, collection, market, tournaments, users
 from .seed import seed_database
 
 mimetypes.add_type("text/css", ".css")
@@ -34,6 +34,7 @@ app.include_router(users.router)
 app.include_router(cards.router)
 app.include_router(collection.router)
 app.include_router(market.router)
+app.include_router(tournaments.router)
 
 
 @app.get("/api/health")

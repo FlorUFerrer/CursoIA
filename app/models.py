@@ -12,6 +12,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    is_premium: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_store: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     listings = relationship("Listing", back_populates="seller")
@@ -19,6 +21,7 @@ class User(Base):
     scans = relationship("Scan", back_populates="user")
     offers = relationship("Offer", back_populates="buyer", foreign_keys="Offer.buyer_id")
     reservations = relationship("Reservation", back_populates="buyer")
+    tournaments = relationship("Tournament", back_populates="organizer")
 
 
 class Card(Base):
@@ -125,3 +128,19 @@ class Reservation(Base):
 
     listing = relationship("Listing", back_populates="reservations")
     buyer = relationship("User", back_populates="reservations")
+
+
+class Tournament(Base):
+    __tablename__ = "tournaments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    organizer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_date: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # active | cancelled
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    organizer = relationship("User", back_populates="tournaments")

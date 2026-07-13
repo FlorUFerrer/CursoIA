@@ -8,11 +8,11 @@ const TOKEN_KEY = "tcg_token";
 const USER_KEY = "tcg_user";
 
 const NAV_ITEMS = [
-  { id: "home", label: "Inicio", icon: "🏠" },
-  { id: "scan", label: "Escanear", icon: "⊞" },
-  { id: "catalog", label: "Catálogo", icon: "📚" },
-  { id: "market", label: "Mercado", icon: "🛍" },
-  { id: "profile", label: "Perfil", icon: "👤" },
+  { id: "home", label: "Inicio", icon: "home" },
+  { id: "scan", label: "Escanear", icon: "scan-line" },
+  { id: "catalog", label: "Catálogo", icon: "book-open" },
+  { id: "market", label: "Mercado", icon: "shopping-bag" },
+  { id: "profile", label: "Perfil", icon: "user" },
 ];
 
 const state = {
@@ -23,6 +23,7 @@ const state = {
   recentScans: [],
   collection: null,
   listings: [],
+  tournaments: [],
   stats: null,
   authMode: "login",
   selectedFile: null,
@@ -38,6 +39,15 @@ const state = {
 
 const app = document.getElementById("app");
 const bottomNav = document.getElementById("bottom-nav");
+const topBar = document.getElementById("top-bar");
+
+function icon(name, cls) {
+  return `<i data-lucide="${name}"${cls ? ` class="${cls}"` : ""}></i>`;
+}
+
+function refreshIcons() {
+  if (window.lucide) window.lucide.createIcons();
+}
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -139,7 +149,7 @@ function chartHtml(history) {
 
 function thumbHtml(card) {
   if (card.image_url) return `<img src="${card.image_url}" alt="${card.name}" loading="lazy" />`;
-  return "🃏";
+  return icon("layers", "thumb-icon");
 }
 
 function scanItemHtml(card) {
@@ -170,18 +180,18 @@ function renderHome() {
     <div class="home-layout">
       <div class="home-primary">
         <button class="btn btn-primary btn-scan-hero" id="btn-scan-hero" aria-label="Escanear carta gratis sin registro">
-          <span class="btn-icon">⊞</span>
+          ${icon("scan-line", "btn-icon")}
           <span class="btn-title">Escanear carta</span>
           <span class="btn-sub">Gratis · sin registro</span>
         </button>
         <div class="tile-grid">
           <div class="tile" data-go="collection" role="button" tabindex="0">
-            <span class="tile-icon">🃏</span>
+            ${icon("layers", "tile-icon")}
             <div class="tile-title">Mi colección</div>
             <div class="tile-sub">${count} cartas</div>
           </div>
           <div class="tile" data-go="market" role="button" tabindex="0">
-            <span class="tile-icon">🛍</span>
+            ${icon("shopping-bag", "tile-icon")}
             <div class="tile-title">Mercado</div>
             <div class="tile-sub">Ver ofertas</div>
           </div>
@@ -200,10 +210,15 @@ function renderHome() {
 function renderScanIdle() {
   const preview = state.previewUrl
     ? `<img src="${state.previewUrl}" alt="Vista previa" class="scan-preview" />`
-    : `<div class="viewfinder-hint"><span class="hint-icon">📷</span>Apuntá la cámara a la carta</div>`;
+    : `<div class="viewfinder-hint">${icon("camera", "hint-icon")}Apuntá la cámara a la carta</div>`;
   return `
     <h2 class="page-title">Escanear carta</h2>
     <p class="page-sub">IA de visión · Gratis · Sin registro</p>
+    <div class="search-box" style="margin-bottom:0.5rem">
+      ${icon("search", "search-icon")}
+      <input class="auth-input search-input" id="scan-search" placeholder="O buscá una carta por nombre (catálogo)..." />
+    </div>
+    <ul class="scan-list" id="scan-search-results"></ul>
     <div class="viewfinder" id="viewfinder">
       <div class="viewfinder-corner tl"></div>
       <div class="viewfinder-corner tr"></div>
@@ -214,11 +229,11 @@ function renderScanIdle() {
     <input type="file" id="scan-file" accept="image/*" capture="environment" hidden />
     <div class="action-row" style="margin-bottom:0.75rem">
       <button class="btn btn-outline btn-action-row" id="btn-pick-photo">
-        <span class="btn-icon">📷</span>
+        ${icon("camera", "btn-icon")}
         Foto / Cámara
       </button>
       <button class="btn btn-primary btn-action-row" id="btn-run-scan">
-        <span class="btn-icon">⊞</span>
+        ${icon("scan-line", "btn-icon")}
         Escanear
       </button>
     </div>
@@ -236,7 +251,7 @@ function renderScanResult(card) {
       <div class="viewfinder-corner bl"></div>
       <div class="viewfinder-corner br"></div>
       <div class="viewfinder-hint">
-        <span class="hint-icon">🃏</span>
+        ${icon("layers", "hint-icon")}
         Carta identificada${state.scanMethod ? ` · ${state.scanMethod}` : ""}
       </div>
     </div>
@@ -255,15 +270,15 @@ function renderScanResult(card) {
     </div>
     <div class="action-row">
       <button class="btn btn-outline btn-action-row" id="btn-save">
-        <span class="btn-icon">🔖</span>
+        ${icon("bookmark", "btn-icon")}
         Guardar
       </button>
       <button class="btn btn-primary btn-action-row" id="btn-publish">
-        <span class="btn-icon">🏷</span>
+        ${icon("tag", "btn-icon")}
         Publicar
       </button>
       <button class="btn btn-outline btn-action-row" id="btn-new-scan">
-        <span class="btn-icon">⊞</span>
+        ${icon("scan-line", "btn-icon")}
         Nueva
       </button>
     </div>
@@ -290,7 +305,7 @@ function renderCollection() {
       <h2 class="page-title">Mi colección</h2>
       <p class="page-sub">Iniciá sesión para guardar cartas</p>
       <div class="empty-state">
-        <div class="empty-icon">🔒</div>
+        <div class="empty-icon">${icon("lock")}</div>
         <p>Necesitás una cuenta para usar la colección.</p>
         <button class="btn btn-primary" id="btn-go-auth" style="margin-top:1rem;padding:0.75rem 1.25rem">Iniciar sesión</button>
       </div>
@@ -299,7 +314,7 @@ function renderCollection() {
   const items = state.collection?.items || [];
   const list = items.length
     ? `<ul class="scan-list">${items.map((i) => scanItemHtml(i.card)).join("")}</ul>`
-    : `<div class="empty-state"><div class="empty-icon">🃏</div><p>Todavía no guardaste cartas.<br>Escaneá una y tocá <strong>Guardar</strong>.</p></div>`;
+    : `<div class="empty-state"><div class="empty-icon">${icon("layers")}</div><p>Todavía no guardaste cartas.<br>Escaneá una y tocá <strong>Guardar</strong>.</p></div>`;
   return `
     <div class="collection-layout">
       <h2 class="page-title">Mi colección</h2>
@@ -340,12 +355,31 @@ function renderCatalog() {
     <h2 class="page-title">Catálogo</h2>
     <p class="page-sub">${state.catalogLoading ? "Cargando…" : `${cards.length} cartas`}</p>
     <select class="auth-input" id="catalog-set-select" style="width:100%;margin-bottom:0.5rem">${options}</select>
-    <input class="auth-input" id="catalog-search" placeholder="Buscar por nombre, set o rareza..." style="width:100%;margin-bottom:0.75rem" />
+    <div class="search-box">
+      ${icon("search", "search-icon")}
+      <input class="auth-input search-input" id="catalog-search" placeholder="Buscar por nombre, set o rareza..." />
+    </div>
     <ul class="scan-list" id="catalog-list">${listHtml}</ul>
   `;
 }
 
 function renderMarket() {
+  const tournamentsHtml = (state.tournaments || []).length > 0
+    ? `<div style="margin-bottom:1rem">
+        <p class="page-sub" style="font-weight:600;margin-bottom:0.5rem">${icon("trophy", "icon-inline")} Torneos activos</p>
+        ${(state.tournaments || []).map((t) => `
+        <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #f59e0b33">
+          <div class="scan-info" style="flex:1">
+            <div class="scan-name" style="color:#f59e0b">${t.title}</div>
+            <div class="scan-set">${icon("store", "icon-inline")} ${t.organizer_username}${t.event_date ? ` · ${icon("calendar", "icon-inline")} ${t.event_date}` : ""}</div>
+            ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
+            ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
+          </div>
+        </div>`).join("")}
+        <p class="page-sub" style="font-weight:600;margin:1rem 0 0.5rem">${icon("shopping-bag", "icon-inline")} Publicaciones</p>
+      </div>`
+    : "";
+
   const listings = (state.listings || [])
     .map((l) => {
       const c = l.card;
@@ -373,9 +407,10 @@ function renderMarket() {
 
   return `
     <h2 class="page-title">Mercado</h2>
-    <p class="page-sub">Reservas · Ofertas · Negociación</p>
+    <p class="page-sub">Reservas · Ofertas · Negociación · Torneos</p>
     <div class="market-grid">
-      ${listings || '<div class="empty-state"><div class="empty-icon">🛍</div><p>No hay publicaciones aún.</p></div>'}
+      ${tournamentsHtml}
+      ${listings || `<div class="empty-state"><div class="empty-icon">${icon("shopping-bag")}</div><p>No hay publicaciones aún.</p></div>`}
     </div>
     <p class="page-sub" style="margin-top:1rem;font-size:0.75rem">
       Publicá cartas desde el resultado del escaneo con el botón <strong>Publicar</strong>.
@@ -403,7 +438,11 @@ function renderAuth() {
       ${isLogin ? '¿No tenés cuenta?' : "¿Ya tenés cuenta?"}
       <button class="link-btn" id="btn-toggle-auth" type="button">${isLogin ? "Registrate" : "Iniciá sesión"}</button>
     </p>
-    <p class="page-sub" style="font-size:0.75rem;text-align:center">Demo: usuario <strong>demo</strong> / <strong>demo123</strong></p>
+    <p class="page-sub" style="font-size:0.75rem;text-align:center">
+      Demo: <strong>usuario</strong> / <strong>usuario123</strong> (premium) ·
+      <strong>tienda</strong> / <strong>tienda123</strong> (tienda) ·
+      <strong>otrousuario</strong> / <strong>otrousuario123</strong>
+    </p>
   `;
 }
 
@@ -411,9 +450,47 @@ function renderProfile() {
   if (!isLoggedIn()) return renderAuth();
   const user = getUser();
   const stats = state.stats || { scans_count: 0, collection_count: 0, collection_value: 0 };
+  const isPremium = user?.is_premium;
+  const isStore = user?.is_store;
+
+  const premiumBlock = isPremium
+    ? `<div class="premium-banner" style="background:linear-gradient(135deg,#065f46,#064e3b);border:1px solid #34d39966">
+        <h3>${icon("crown", "icon-inline")} Premium activo</h3>
+        <p>Tenés acceso a alertas de precio · Análisis avanzado de mazo · Historial extendido</p>
+       </div>`
+    : `<div class="premium-banner">
+        <h3>${icon("crown", "icon-inline")} Premium</h3>
+        <p>Alertas de precio · Análisis avanzado de mazo · Historial extendido</p>
+        <button class="btn btn-primary" id="btn-premium" style="padding:0.6rem 1.25rem;font-size:0.85rem">
+          Conocer planes
+        </button>
+       </div>`;
+
+  const storeMenuItem = isStore
+    ? `<li class="menu-item" data-action="publish-tournament">
+        <div class="menu-icon">${icon("trophy")}</div>
+        <div class="menu-text">
+          <div class="menu-title">Publicar Torneo</div>
+          <div class="menu-desc">Crear un torneo visible para todos los usuarios</div>
+        </div>
+        ${icon("chevron-right", "menu-arrow")}
+       </li>`
+    : `<li class="menu-item" data-action="tournaments">
+        <div class="menu-icon">${icon("trophy")}</div>
+        <div class="menu-text">
+          <div class="menu-title">Torneos</div>
+          <div class="menu-desc">Ver torneos de tiendas asociadas</div>
+        </div>
+        ${icon("chevron-right", "menu-arrow")}
+       </li>`;
+
+  const subtitleTag = [isStore ? "Tienda" : "", isPremium ? `${icon("crown", "icon-inline")} Premium` : ""]
+    .filter(Boolean)
+    .join(" · ");
+
   return `
     <h2 class="page-title">Perfil</h2>
-    <p class="page-sub">@${user?.username || "jugador"}</p>
+    <p class="page-sub">@${user?.username || "jugador"}${subtitleTag ? ` · ${subtitleTag}` : ""}</p>
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-value">${stats.scans_count}</div>
@@ -424,45 +501,24 @@ function renderProfile() {
         <div class="stat-label">En colección</div>
       </div>
     </div>
-    <div class="premium-banner">
-      <h3>⭐ Premium</h3>
-      <p>Alertas de precio · Análisis avanzado de mazo · Historial extendido</p>
-      <button class="btn btn-primary" id="btn-premium" style="padding:0.6rem 1.25rem;font-size:0.85rem">
-        Conocer planes
-      </button>
-    </div>
+    ${premiumBlock}
     <ul class="menu-list">
+      ${storeMenuItem}
       <li class="menu-item" data-action="alerts">
-        <div class="menu-icon">🔔</div>
+        <div class="menu-icon">${icon("bell")}</div>
         <div class="menu-text">
-          <div class="menu-title">Alertas de precio</div>
+          <div class="menu-title">Alertas de precio${isPremium ? "" : ` ${icon("lock", "icon-inline")}`}</div>
           <div class="menu-desc">Avisos cuando sube o baja una carta</div>
         </div>
-        <span class="menu-arrow">›</span>
+        ${icon("chevron-right", "menu-arrow")}
       </li>
       <li class="menu-item" data-action="deck">
-        <div class="menu-icon">📊</div>
+        <div class="menu-icon">${icon("bar-chart-3")}</div>
         <div class="menu-text">
-          <div class="menu-title">Análisis de mazo</div>
+          <div class="menu-title">Análisis de mazo${isPremium ? "" : ` ${icon("lock", "icon-inline")}`}</div>
           <div class="menu-desc">Cartas que faltan · Meta</div>
         </div>
-        <span class="menu-arrow">›</span>
-      </li>
-      <li class="menu-item" data-action="tournaments">
-        <div class="menu-icon">🏆</div>
-        <div class="menu-text">
-          <div class="menu-title">Torneos</div>
-          <div class="menu-desc">Notificaciones · Inscripción</div>
-        </div>
-        <span class="menu-arrow">›</span>
-      </li>
-      <li class="menu-item" data-action="logout">
-        <div class="menu-icon">🚪</div>
-        <div class="menu-text">
-          <div class="menu-title">Cerrar sesión</div>
-          <div class="menu-desc">Salir de ${user?.username || "la cuenta"}</div>
-        </div>
-        <span class="menu-arrow">›</span>
+        ${icon("chevron-right", "menu-arrow")}
       </li>
     </ul>
   `;
@@ -473,7 +529,7 @@ function renderNav() {
     const active = state.screen === item.id;
     return `
     <button class="nav-item${active ? " active" : ""}" data-nav="${item.id}" aria-label="${item.label}" aria-current="${active ? "page" : "false"}">
-      <span class="nav-icon">${item.icon}</span>
+      ${icon(item.icon, "nav-icon")}
       <span>${item.label}</span>
     </button>`;
   }).join("");
@@ -485,6 +541,25 @@ function renderNav() {
     </div>
     ${items}
   `;
+}
+
+function renderTopBar() {
+  const user = getUser();
+  if (!isLoggedIn() || !user) return "";
+  return `
+    <span class="top-bar-user">@${user.username}</span>
+    <button class="top-bar-logout" id="btn-logout-top" aria-label="Cerrar sesión" title="Cerrar sesión">
+      ${icon("log-out")}
+    </button>
+  `;
+}
+
+function performLogout() {
+  clearAuth();
+  state.collection = null;
+  state.stats = null;
+  showToast("Sesión cerrada");
+  render();
 }
 
 function render() {
@@ -500,7 +575,9 @@ function render() {
   const renderer = screens[state.screen] || renderHome;
   app.innerHTML = renderer();
   renderNav();
+  topBar.innerHTML = renderTopBar();
   bindEvents();
+  refreshIcons();
 }
 
 async function loadHomeData() {
@@ -547,6 +624,11 @@ async function loadMarket() {
     state.listings = await api("/market/listings");
   } catch {
     state.listings = [];
+  }
+  try {
+    state.tournaments = await api("/tournaments");
+  } catch {
+    state.tournaments = [];
   }
 }
 
@@ -644,6 +726,31 @@ function bindEvents() {
     render();
   });
 
+  document.getElementById("scan-search")?.addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const results = document.getElementById("scan-search-results");
+    if (!results) return;
+    if (!q) {
+      results.innerHTML = "";
+      return;
+    }
+    const matches = (state.catalogCards || [])
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.set_name.toLowerCase().includes(q) ||
+          c.rarity.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+    results.innerHTML = matches.length
+      ? matches.map(scanItemHtml).join("")
+      : '<li class="empty-state">Sin resultados en el set actual del catálogo.</li>';
+    results.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
+      el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
+    });
+    refreshIcons();
+  });
+
   document.getElementById("btn-pick-photo")?.addEventListener("click", () => {
     document.getElementById("scan-file")?.click();
   });
@@ -705,6 +812,8 @@ function bindEvents() {
 
   document.getElementById("btn-go-auth")?.addEventListener("click", () => navigate("profile"));
 
+  document.getElementById("btn-logout-top")?.addEventListener("click", performLogout);
+
   document.getElementById("btn-toggle-auth")?.addEventListener("click", () => {
     state.authMode = state.authMode === "login" ? "register" : "login";
     render();
@@ -758,6 +867,7 @@ function bindEvents() {
     list.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
       el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
     });
+    refreshIcons();
   });
 
   document.querySelectorAll("[data-nav]").forEach((el) => {
@@ -801,18 +911,30 @@ function bindEvents() {
   document.querySelectorAll("[data-action]").forEach((el) => {
     el.addEventListener("click", async () => {
       const action = el.dataset.action;
-      if (action === "logout") {
-        clearAuth();
-        state.collection = null;
-        state.stats = null;
-        showToast("Sesión cerrada");
-        render();
+      if (action === "publish-tournament") {
+        const title = prompt("Nombre del torneo:", "");
+        if (!title) return;
+        const description = prompt("Descripción (opcional):", "") || null;
+        const eventDate = prompt("Fecha del evento (YYYY-MM-DD, opcional):", "") || null;
+        const location = prompt("Lugar (opcional):", "") || null;
+        try {
+          await api("/tournaments", {
+            method: "POST",
+            json: { title, description, event_date: eventDate, location },
+          });
+          showToast("¡Torneo publicado! Ya aparece en el Mercado para todos los usuarios.");
+          await navigate("market");
+        } catch (e) {
+          showToast(e.message);
+        }
         return;
       }
+      const user = getUser();
+      const isPremium = user?.is_premium;
       const labels = {
-        alerts: "Alertas de precio (función premium)",
-        deck: "Análisis de mazo: cartas que faltan y meta",
-        tournaments: "Torneos de tiendas asociadas",
+        alerts: isPremium ? "Alertas de precio: configurá notificaciones desde la app móvil" : "Alertas de precio (función premium — iniciá sesión como usuario premium)",
+        deck: isPremium ? "Análisis de mazo: próximamente disponible" : "Análisis de mazo (función premium — iniciá sesión como usuario premium)",
+        tournaments: "Ver torneos activos en la pestaña Mercado",
       };
       showToast(labels[action] || "Próximamente");
     });
@@ -822,4 +944,17 @@ function bindEvents() {
 (async function init() {
   await loadHomeData();
   render();
+
+  // Precarga el set por defecto del catálogo en segundo plano, para que el
+  // buscador de Escanear tenga datos sin obligar a pasar por la pestaña Catálogo.
+  loadCatalogSets()
+    .then(() => {
+      if (state.catalogSetId && state.catalogCardsSetId !== state.catalogSetId) {
+        return loadCatalogCards(state.catalogSetId);
+      }
+    })
+    .then(() => {
+      if (state.screen === "scan" || state.screen === "catalog") render();
+    })
+    .catch(() => {});
 })();

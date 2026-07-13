@@ -41,6 +41,8 @@ class UserLogin(BaseModel):
 class UserOut(BaseModel):
     id: int
     username: str
+    is_premium: bool = False
+    is_store: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -115,6 +117,25 @@ class ReservationOut(BaseModel):
     listing_id: int
     buyer_id: int
     buyer_username: str
+    status: str
+    created_at: datetime
+
+
+class TournamentCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    description: Optional[str] = None
+    event_date: Optional[str] = None
+    location: Optional[str] = None
+
+
+class TournamentOut(BaseModel):
+    id: int
+    organizer_id: int
+    organizer_username: str
+    title: str
+    description: Optional[str] = None
+    event_date: Optional[str] = None
+    location: Optional[str] = None
     status: str
     created_at: datetime
 
