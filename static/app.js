@@ -156,27 +156,33 @@ function renderHome() {
   const count = state.collection?.count ?? "—";
   return `
     ${logoHtml()}
-    <button class="btn btn-primary btn-scan-hero" id="btn-scan-hero" aria-label="Escanear carta gratis sin registro">
-      <span class="btn-icon">⊞</span>
-      <span class="btn-title">Escanear carta</span>
-      <span class="btn-sub">Gratis · sin registro</span>
-    </button>
-    <div class="tile-grid">
-      <div class="tile" data-go="collection" role="button" tabindex="0">
-        <span class="tile-icon">🃏</span>
-        <div class="tile-title">Mi colección</div>
-        <div class="tile-sub">${count} cartas</div>
+    <div class="home-layout">
+      <div class="home-primary">
+        <button class="btn btn-primary btn-scan-hero" id="btn-scan-hero" aria-label="Escanear carta gratis sin registro">
+          <span class="btn-icon">⊞</span>
+          <span class="btn-title">Escanear carta</span>
+          <span class="btn-sub">Gratis · sin registro</span>
+        </button>
+        <div class="tile-grid">
+          <div class="tile" data-go="collection" role="button" tabindex="0">
+            <span class="tile-icon">🃏</span>
+            <div class="tile-title">Mi colección</div>
+            <div class="tile-sub">${count} cartas</div>
+          </div>
+          <div class="tile" data-go="market" role="button" tabindex="0">
+            <span class="tile-icon">🛍</span>
+            <div class="tile-title">Mercado</div>
+            <div class="tile-sub">Ver ofertas</div>
+          </div>
+        </div>
       </div>
-      <div class="tile" data-go="market" role="button" tabindex="0">
-        <span class="tile-icon">🛍</span>
-        <div class="tile-title">Mercado</div>
-        <div class="tile-sub">Ver ofertas</div>
+      <div class="home-side">
+        <p class="section-label">Últimos escaneos</p>
+        <ul class="scan-list">
+          ${state.recentScans.length ? state.recentScans.map(scanItemHtml).join("") : '<li class="empty-state">Todavía no hay escaneos. Tocá Escanear.</li>'}
+        </ul>
       </div>
     </div>
-    <p class="section-label">Últimos escaneos</p>
-    <ul class="scan-list">
-      ${state.recentScans.length ? state.recentScans.map(scanItemHtml).join("") : '<li class="empty-state">Todavía no hay escaneos. Tocá Escanear.</li>'}
-    </ul>
   `;
 }
 
@@ -283,19 +289,21 @@ function renderCollection() {
     ? `<ul class="scan-list">${items.map((i) => scanItemHtml(i.card)).join("")}</ul>`
     : `<div class="empty-state"><div class="empty-icon">🃏</div><p>Todavía no guardaste cartas.<br>Escaneá una y tocá <strong>Guardar</strong>.</p></div>`;
   return `
-    <h2 class="page-title">Mi colección</h2>
-    <p class="page-sub">Historial · Valor total estimado</p>
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-value">${state.collection?.count ?? 0}</div>
-        <div class="stat-label">Cartas</div>
+    <div class="collection-layout">
+      <h2 class="page-title">Mi colección</h2>
+      <p class="page-sub">Historial · Valor total estimado</p>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-value">${state.collection?.count ?? 0}</div>
+          <div class="stat-label">Cartas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">$${formatPrice(state.collection?.total_value ?? 0)}</div>
+          <div class="stat-label">Valor estimado</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value">$${formatPrice(state.collection?.total_value ?? 0)}</div>
-        <div class="stat-label">Valor estimado</div>
-      </div>
+      ${list}
     </div>
-    ${list}
   `;
 }
 
@@ -328,7 +336,9 @@ function renderMarket() {
   return `
     <h2 class="page-title">Mercado</h2>
     <p class="page-sub">Reservas · Ofertas · Negociación</p>
-    ${listings || '<div class="empty-state"><div class="empty-icon">🛍</div><p>No hay publicaciones aún.</p></div>'}
+    <div class="market-grid">
+      ${listings || '<div class="empty-state"><div class="empty-icon">🛍</div><p>No hay publicaciones aún.</p></div>'}
+    </div>
     <p class="page-sub" style="margin-top:1rem;font-size:0.75rem">
       Publicá cartas desde el resultado del escaneo con el botón <strong>Publicar</strong>.
     </p>
@@ -421,7 +431,7 @@ function renderProfile() {
 }
 
 function renderNav() {
-  bottomNav.innerHTML = NAV_ITEMS.map((item) => {
+  const items = NAV_ITEMS.map((item) => {
     const active = state.screen === item.id;
     return `
     <button class="nav-item${active ? " active" : ""}" data-nav="${item.id}" aria-label="${item.label}" aria-current="${active ? "page" : "false"}">
@@ -429,6 +439,14 @@ function renderNav() {
       <span>${item.label}</span>
     </button>`;
   }).join("");
+
+  bottomNav.innerHTML = `
+    <div class="desktop-brand">
+      <div class="logo"><span class="logo-tcg">TCG</span><span class="logo-trade">Trade</span></div>
+      <p class="tagline">Scan & Value</p>
+    </div>
+    ${items}
+  `;
 }
 
 function render() {
