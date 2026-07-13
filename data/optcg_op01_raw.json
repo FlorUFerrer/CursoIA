@@ -1,0 +1,970 @@
+[
+  {
+    "code": "OP01-077",
+    "name": "Perona",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 1.03,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-077.jpg"
+  },
+  {
+    "code": "OP01-015",
+    "name": "Tony Tony.Chopper",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.5,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-015.jpg"
+  },
+  {
+    "code": "OP01-006",
+    "name": "Otama",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.35,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-006.jpg"
+  },
+  {
+    "code": "OP01-073",
+    "name": "Donquixote Doflamingo (073)",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.43,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-073.jpg"
+  },
+  {
+    "code": "OP01-033",
+    "name": "Izo",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.24,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-033.jpg"
+  },
+  {
+    "code": "OP01-029",
+    "name": "Radical Beam!!",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.29,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-029.jpg"
+  },
+  {
+    "code": "OP01-016",
+    "name": "Nami",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 3.42,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-016.jpg"
+  },
+  {
+    "code": "OP01-088",
+    "name": "Desert Spada",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.38,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-088.jpg"
+  },
+  {
+    "code": "OP01-047",
+    "name": "Trafalgar Law (047)",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 0.52,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-047.jpg"
+  },
+  {
+    "code": "OP01-051",
+    "name": "Eustass\"Captain\"Kid",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 0.65,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-051.jpg"
+  },
+  {
+    "code": "OP01-055",
+    "name": "You Can Be My Samurai!!",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.17,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-055.jpg"
+  },
+  {
+    "code": "OP01-013",
+    "name": "Sanji",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.59,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-013.jpg"
+  },
+  {
+    "code": "OP01-041",
+    "name": "Kouzuki Momonosuke",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.2,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-041.jpg"
+  },
+  {
+    "code": "OP01-025",
+    "name": "Roronoa Zoro (025)",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 6.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-025.jpg"
+  },
+  {
+    "code": "OP01-049",
+    "name": "Bepo",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.29,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-049.jpg"
+  },
+  {
+    "code": "OP01-114",
+    "name": "X.Drake (114)",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.27,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-114.jpg"
+  },
+  {
+    "code": "OP01-079",
+    "name": "Ms. All Sunday",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 1.24,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-079.jpg"
+  },
+  {
+    "code": "OP01-094",
+    "name": "Kaido (094)",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 1.55,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-094.jpg"
+  },
+  {
+    "code": "OP01-010",
+    "name": "Komachiyo",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-010.jpg"
+  },
+  {
+    "code": "OP01-078",
+    "name": "Boa Hancock",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 2.18,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-078.jpg"
+  },
+  {
+    "code": "OP01-070",
+    "name": "Dracule Mihawk",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 1.26,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-070.jpg"
+  },
+  {
+    "code": "OP01-024",
+    "name": "Monkey.D.Luffy (024)",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 5.97,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-024.jpg"
+  },
+  {
+    "code": "OP01-096",
+    "name": "King (096)",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 0.81,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-096.jpg"
+  },
+  {
+    "code": "OP01-121",
+    "name": "Yamato",
+    "set_name": "OP-01",
+    "rarity": "Secret Rare",
+    "market_price_usd": 8.48,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-121.jpg"
+  },
+  {
+    "code": "OP01-067",
+    "name": "Crocodile (067)",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 0.84,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-067.jpg"
+  },
+  {
+    "code": "OP01-075",
+    "name": "Pacifista",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.18,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-075.jpg"
+  },
+  {
+    "code": "OP01-120",
+    "name": "Shanks",
+    "set_name": "OP-01",
+    "rarity": "Secret Rare",
+    "market_price_usd": 9.74,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-120.jpg"
+  },
+  {
+    "code": "OP01-106",
+    "name": "Basil Hawkins",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.24,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-106.jpg"
+  },
+  {
+    "code": "OP01-058",
+    "name": "Punk Gibson",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.43,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-058.jpg"
+  },
+  {
+    "code": "OP01-054",
+    "name": "X.Drake (054)",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.34,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-054.jpg"
+  },
+  {
+    "code": "OP01-040",
+    "name": "Kin'emon",
+    "set_name": "OP-01",
+    "rarity": "Super Rare",
+    "market_price_usd": 0.58,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-040.jpg"
+  },
+  {
+    "code": "OP01-117",
+    "name": "Sheep's Horn",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-117.jpg"
+  },
+  {
+    "code": "OP01-068",
+    "name": "Gecko Moria",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.26,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-068.jpg"
+  },
+  {
+    "code": "OP01-026",
+    "name": "Gum-Gum Fire-Fist Pistol Red Hawk",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.98,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-026.jpg"
+  },
+  {
+    "code": "OP01-101",
+    "name": "Sasaki",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.25,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-101.jpg"
+  },
+  {
+    "code": "OP01-001",
+    "name": "Roronoa Zoro (001)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 6.0,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-001.jpg"
+  },
+  {
+    "code": "OP01-017",
+    "name": "Nico Robin",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.45,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-017.jpg"
+  },
+  {
+    "code": "OP01-035",
+    "name": "Okiku",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.26,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-035.jpg"
+  },
+  {
+    "code": "OP01-119",
+    "name": "Thunder Bagua",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.54,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-119.jpg"
+  },
+  {
+    "code": "OP01-022",
+    "name": "Brook",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.25,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-022.jpg"
+  },
+  {
+    "code": "OP01-086",
+    "name": "Overheat",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.2,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-086.jpg"
+  },
+  {
+    "code": "OP01-060",
+    "name": "Donquixote Doflamingo (060)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 0.49,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-060.jpg"
+  },
+  {
+    "code": "OP01-112",
+    "name": "Page One",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.23,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-112.jpg"
+  },
+  {
+    "code": "OP01-046",
+    "name": "Denjiro",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.26,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-046.jpg"
+  },
+  {
+    "code": "OP01-057",
+    "name": "Paradise Waterfall",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.79,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-057.jpg"
+  },
+  {
+    "code": "OP01-093",
+    "name": "Ulti",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.27,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-093.jpg"
+  },
+  {
+    "code": "OP01-027",
+    "name": "Round Table",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.79,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-027.jpg"
+  },
+  {
+    "code": "OP01-005",
+    "name": "Uta",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.32,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-005.jpg"
+  },
+  {
+    "code": "OP01-030",
+    "name": "In Two Years!! At the Sabaody Archipelago!!",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.9,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-030.jpg"
+  },
+  {
+    "code": "OP01-097",
+    "name": "Queen",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.21,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-097.jpg"
+  },
+  {
+    "code": "OP01-048",
+    "name": "Nekomamushi",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-048.jpg"
+  },
+  {
+    "code": "OP01-111",
+    "name": "Black Maria",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.19,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-111.jpg"
+  },
+  {
+    "code": "OP01-074",
+    "name": "Bartholomew Kuma",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.24,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-074.jpg"
+  },
+  {
+    "code": "OP01-039",
+    "name": "Killer",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.16,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-039.jpg"
+  },
+  {
+    "code": "OP01-102",
+    "name": "Jack",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.16,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-102.jpg"
+  },
+  {
+    "code": "OP01-071",
+    "name": "Jinbe (071)",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.23,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-071.jpg"
+  },
+  {
+    "code": "OP01-034",
+    "name": "Inuarashi",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-034.jpg"
+  },
+  {
+    "code": "OP01-116",
+    "name": "Artificial Devil Fruit SMILE",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.1,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-116.jpg"
+  },
+  {
+    "code": "OP01-031",
+    "name": "Kouzuki Oden",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 0.28,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-031.jpg"
+  },
+  {
+    "code": "OP01-108",
+    "name": "Hitokiri Kamazo",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.15,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-108.jpg"
+  },
+  {
+    "code": "OP01-061",
+    "name": "Kaido (061)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 0.39,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-061.jpg"
+  },
+  {
+    "code": "OP01-064",
+    "name": "Alvida",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.1,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-064.jpg"
+  },
+  {
+    "code": "OP01-002",
+    "name": "Trafalgar Law (002)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 3.78,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-002.jpg"
+  },
+  {
+    "code": "OP01-063",
+    "name": "Arlong",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.13,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-063.jpg"
+  },
+  {
+    "code": "OP01-004",
+    "name": "Usopp",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.28,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-004.jpg"
+  },
+  {
+    "code": "OP01-011",
+    "name": "Gordon",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-011.jpg"
+  },
+  {
+    "code": "OP01-084",
+    "name": "Mr.2.Bon.Kurei (Bentham)",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.14,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-084.jpg"
+  },
+  {
+    "code": "OP01-069",
+    "name": "Caesar Clown",
+    "set_name": "OP-01",
+    "rarity": "Rare",
+    "market_price_usd": 0.27,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-069.jpg"
+  },
+  {
+    "code": "OP01-118",
+    "name": "Ulti-Mortar",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.16,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-118.jpg"
+  },
+  {
+    "code": "OP01-003",
+    "name": "Monkey.D.Luffy (003)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 27.15,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-003.jpg"
+  },
+  {
+    "code": "OP01-052",
+    "name": "Raizo",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-052.jpg"
+  },
+  {
+    "code": "OP01-056",
+    "name": "Demon Face",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.1,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-056.jpg"
+  },
+  {
+    "code": "OP01-019",
+    "name": "Bartolomeo",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.09,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-019.jpg"
+  },
+  {
+    "code": "OP01-090",
+    "name": "Baroque Works",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.13,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-090.jpg"
+  },
+  {
+    "code": "OP01-103",
+    "name": "Scratchmen Apoo",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-103.jpg"
+  },
+  {
+    "code": "OP01-089",
+    "name": "Crescent Cutlass",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-089.jpg"
+  },
+  {
+    "code": "OP01-021",
+    "name": "Franky",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.11,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-021.jpg"
+  },
+  {
+    "code": "OP01-091",
+    "name": "King (091)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 0.31,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-091.jpg"
+  },
+  {
+    "code": "OP01-009",
+    "name": "Carrot",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.18,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-009.jpg"
+  },
+  {
+    "code": "OP01-072",
+    "name": "Smiley",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-072.jpg"
+  },
+  {
+    "code": "OP01-082",
+    "name": "Monet",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.11,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-082.jpg"
+  },
+  {
+    "code": "OP01-014",
+    "name": "Jinbe (014)",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.13,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-014.jpg"
+  },
+  {
+    "code": "OP01-065",
+    "name": "Vergo",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-065.jpg"
+  },
+  {
+    "code": "OP01-110",
+    "name": "Fukurokuju",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-110.jpg"
+  },
+  {
+    "code": "OP01-095",
+    "name": "Kyoshirou",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.09,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-095.jpg"
+  },
+  {
+    "code": "OP01-098",
+    "name": "Kurozumi Orochi",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.13,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-098.jpg"
+  },
+  {
+    "code": "OP01-037",
+    "name": "Kawamatsu",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-037.jpg"
+  },
+  {
+    "code": "OP01-080",
+    "name": "Miss Doublefinger(Zala)",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-080.jpg"
+  },
+  {
+    "code": "OP01-044",
+    "name": "Shachi",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.11,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-044.jpg"
+  },
+  {
+    "code": "OP01-107",
+    "name": "Babanuki",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-107.jpg"
+  },
+  {
+    "code": "OP01-045",
+    "name": "Jean Bart",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.05,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-045.jpg"
+  },
+  {
+    "code": "OP01-020",
+    "name": "Hyogoro",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-020.jpg"
+  },
+  {
+    "code": "OP01-050",
+    "name": "Penguin",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.12,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-050.jpg"
+  },
+  {
+    "code": "OP01-115",
+    "name": "Elephant's Marchoo",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-115.jpg"
+  },
+  {
+    "code": "OP01-085",
+    "name": "Mr.3 (Galdino)",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.08,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-085.jpg"
+  },
+  {
+    "code": "OP01-104",
+    "name": "Speed",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.09,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-104.jpg"
+  },
+  {
+    "code": "OP01-066",
+    "name": "Krieg",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.05,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-066.jpg"
+  },
+  {
+    "code": "OP01-076",
+    "name": "Bellamy",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.05,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-076.jpg"
+  },
+  {
+    "code": "OP01-032",
+    "name": "Ashura Doji",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.09,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-032.jpg"
+  },
+  {
+    "code": "OP01-105",
+    "name": "Bao Huang",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.1,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-105.jpg"
+  },
+  {
+    "code": "OP01-083",
+    "name": "Mr.1 (Daz.Bonez)",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.09,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-083.jpg"
+  },
+  {
+    "code": "OP01-028",
+    "name": "Green Star Rafflesia",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-028.jpg"
+  },
+  {
+    "code": "OP01-113",
+    "name": "Holedem",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-113.jpg"
+  },
+  {
+    "code": "OP01-087",
+    "name": "Officer Agents",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.14,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-087.jpg"
+  },
+  {
+    "code": "OP01-008",
+    "name": "Cavendish",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-008.jpg"
+  },
+  {
+    "code": "OP01-023",
+    "name": "Marco",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-023.jpg"
+  },
+  {
+    "code": "OP01-081",
+    "name": "Mocha",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-081.jpg"
+  },
+  {
+    "code": "OP01-053",
+    "name": "Wire",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.05,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-053.jpg"
+  },
+  {
+    "code": "OP01-109",
+    "name": "Who's.Who",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.13,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-109.jpg"
+  },
+  {
+    "code": "OP01-092",
+    "name": "Urashima",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-092.jpg"
+  },
+  {
+    "code": "OP01-018",
+    "name": "Hajrudin",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-018.jpg"
+  },
+  {
+    "code": "OP01-043",
+    "name": "Shinobu",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.05,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-043.jpg"
+  },
+  {
+    "code": "OP01-038",
+    "name": "Kanjuro",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.04,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-038.jpg"
+  },
+  {
+    "code": "OP01-036",
+    "name": "Otsuru",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-036.jpg"
+  },
+  {
+    "code": "OP01-100",
+    "name": "Kurozumi Higurashi",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-100.jpg"
+  },
+  {
+    "code": "OP01-099",
+    "name": "Kurozumi Semimaru",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-099.jpg"
+  },
+  {
+    "code": "OP01-059",
+    "name": "BE-BENG!!",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.07,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-059.jpg"
+  },
+  {
+    "code": "OP01-007",
+    "name": "Caribou",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.05,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-007.jpg"
+  },
+  {
+    "code": "OP01-012",
+    "name": "Sai",
+    "set_name": "OP-01",
+    "rarity": "Common",
+    "market_price_usd": 0.06,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-012.jpg"
+  },
+  {
+    "code": "OP01-062",
+    "name": "Crocodile (062)",
+    "set_name": "OP-01",
+    "rarity": "Leader",
+    "market_price_usd": 0.33,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-062.jpg"
+  },
+  {
+    "code": "OP01-042",
+    "name": "Komurasaki",
+    "set_name": "OP-01",
+    "rarity": "Uncommon",
+    "market_price_usd": 0.1,
+    "image_url": "https://optcgapi.com/media/static/Card_Images/OP01-042.jpg"
+  }
+]

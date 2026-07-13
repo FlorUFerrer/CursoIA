@@ -29,6 +29,7 @@ def card_to_out(card: Card) -> CardOut:
         price=card.price,
         trend=card.trend,
         trend_dir=card.trend_dir,
+        image_url=card.image_url,
         history=history,
     )
 

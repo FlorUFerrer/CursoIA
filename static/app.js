@@ -131,11 +131,16 @@ function chartHtml(history) {
   `;
 }
 
+function thumbHtml(card) {
+  if (card.image_url) return `<img src="${card.image_url}" alt="${card.name}" loading="lazy" />`;
+  return "🃏";
+}
+
 function scanItemHtml(card) {
   if (!card) return "";
   return `
     <li class="scan-item" data-card-id="${card.id}" role="button" tabindex="0" aria-label="${card.name}, ${formatPrice(card.price)} pesos">
-      <div class="scan-thumb">🃏</div>
+      <div class="scan-thumb">${thumbHtml(card)}</div>
       <div class="scan-info">
         <div class="scan-name">${card.name}</div>
         <div class="scan-set">${card.game} - ${card.set_name}</div>
@@ -230,6 +235,7 @@ function renderScanResult(card) {
       </div>
     </div>
     <div class="result-card">
+      ${card.image_url ? `<img src="${card.image_url}" alt="${card.name}" class="result-image" loading="lazy" />` : ""}
       <div class="result-name">${card.name}</div>
       <div class="result-meta">${card.game} - ${card.code} - ${card.rarity}</div>
       <div class="price-row">
@@ -315,7 +321,7 @@ function renderMarket() {
         l.listing_type === "trade" || l.price == null ? "Solo intercambio" : `$${formatPrice(l.price)}`;
       return `
       <div class="market-card" data-listing-id="${l.id}">
-        <div class="scan-thumb">🃏</div>
+        <div class="scan-thumb">${thumbHtml(c)}</div>
         <div class="scan-info">
           <div class="scan-name">${c.name}</div>
           <div class="scan-set">${l.seller_username} · ${typeLabel(l.listing_type)}</div>

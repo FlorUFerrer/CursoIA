@@ -22,6 +22,7 @@ class CardOut(BaseModel):
     price: int
     trend: float
     trend_dir: str
+    image_url: Optional[str] = None
     history: list[PriceHistoryOut] = []
 
     model_config = {"from_attributes": True}

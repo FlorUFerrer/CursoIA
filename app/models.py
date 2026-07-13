@@ -33,6 +33,7 @@ class Card(Base):
     price: Mapped[int] = mapped_column(Integer)
     trend: Mapped[float] = mapped_column(Float, default=0.0)
     trend_dir: Mapped[str] = mapped_column(String(10), default="stable")
+    image_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     history = relationship("PriceHistory", back_populates="card", cascade="all, delete-orphan")
     listings = relationship("Listing", back_populates="card")
