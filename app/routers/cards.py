@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session, joinedload
 from ..auth import get_optional_user
 from ..database import get_db
 from ..models import Card, Scan, User
+from ..optcg_client import DEFAULT_SET_ID, fetch_all_sets
 from ..schemas import CardOut, PriceHistoryOut, ScanOut
+from ..seed import ensure_set_cards
 
 router = APIRouter(prefix="/api", tags=["cards"])
 
@@ -89,9 +91,29 @@ def identify_card_simulated(image_bytes: bytes, cards: list[Card]) -> Card:
     return cards[idx]
 
 
+@router.get("/catalog/sets")
+def catalog_sets():
+    """Lista de sets de One Piece TCG disponibles, para el selector del catalogo."""
+    try:
+        sets = fetch_all_sets()
+    except Exception:
+        sets = []
+    default_set_id = sets[-1]["set_id"] if sets else DEFAULT_SET_ID
+    return {"sets": sets, "default_set_id": default_set_id}
+
+
 @router.get("/cards", response_model=list[CardOut])
-def list_cards(db: Session = Depends(get_db)):
-    cards = db.query(Card).options(joinedload(Card.history)).order_by(Card.name).all()
+def list_cards(set_id: Optional[str] = None, db: Session = Depends(get_db)):
+    if set_id:
+        try:
+            cards = ensure_set_cards(db, set_id)
+        except Exception:
+            raise HTTPException(status_code=502, detail="No se pudo obtener el set desde la API externa")
+        if not cards:
+            raise HTTPException(status_code=404, detail="Set sin cartas o inexistente")
+        cards = sorted(cards, key=lambda c: c.name)
+    else:
+        cards = db.query(Card).options(joinedload(Card.history)).order_by(Card.name).all()
     return [card_to_out(c) for c in cards]
 
 

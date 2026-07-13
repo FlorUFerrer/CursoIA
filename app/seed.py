@@ -1,20 +1,13 @@
 import random
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from .auth import hash_password
 from .models import Card, Listing, PriceHistory, User
-from .optcg_client import fetch_op01_cards
+from .optcg_client import DEFAULT_SET_ID, fetch_all_sets, fetch_set_cards
 from .pricing import USD_ARS_RATE
 
 HISTORY_LABELS = ("may 1", "may 15", "jun 1", "hoy")
-
-# Cartas usadas para las publicaciones demo del mercado (codigos del set OP-01).
-DEMO_LISTING_CODES = {
-    "sale": "OP01-003",  # Monkey.D.Luffy (Leader)
-    "trade": "OP01-120",  # Shanks
-    "combo": "OP01-024",  # Monkey.D.Luffy (024)
-}
 
 
 def _build_history(code: str) -> tuple[list[tuple[str, int, bool]], float, str]:
@@ -43,12 +36,11 @@ def _build_history(code: str) -> tuple[list[tuple[str, int, bool]], float, str]:
     return history, trend, direction
 
 
-def load_seed_cards() -> list[dict]:
-    raw = fetch_op01_cards()
-    cards = []
-    for entry in raw:
+def _build_card_rows(raw_entries: list[dict]) -> list[dict]:
+    rows = []
+    for entry in raw_entries:
         history, trend, trend_dir = _build_history(entry["code"])
-        cards.append(
+        rows.append(
             {
                 "name": entry["name"],
                 "game": "One Piece",
@@ -62,21 +54,21 @@ def load_seed_cards() -> list[dict]:
                 "history": history,
             }
         )
-    return cards
+    return rows
 
 
-def seed_database(db: Session) -> None:
-    if db.query(Card).count() > 0:
-        return
+def ensure_set_cards(db: Session, set_id: str) -> list[Card]:
+    """Devuelve las cartas de un set. La primera vez que se pide un set, lo
+    trae de la API y lo guarda en la base; las siguientes veces se sirve
+    directo desde ahi (no se vuelve a pedir a optcgapi.com)."""
+    existing = (
+        db.query(Card).options(joinedload(Card.history)).filter(Card.set_name == set_id).all()
+    )
+    if existing:
+        return existing
 
-    demo = User(username="demo", password_hash=hash_password("demo123"))
-    seller = User(username="ColeccionAR", password_hash=hash_password("demo123"))
-    seller2 = User(username="TCG_BA", password_hash=hash_password("demo123"))
-    db.add_all([demo, seller, seller2])
-    db.flush()
-
-    cards_by_code = {}
-    for raw in load_seed_cards():
+    cards = []
+    for raw in _build_card_rows(fetch_set_cards(set_id)):
         data = {k: v for k, v in raw.items() if k != "history"}
         history = raw["history"]
         card = Card(**data)
@@ -91,38 +83,71 @@ def seed_database(db: Session) -> None:
                     is_today=is_today,
                 )
             )
-        cards_by_code[card.code] = card
-
-    db.add(
-        Listing(
-            seller_id=seller.id,
-            card_id=cards_by_code[DEMO_LISTING_CODES["sale"]].id,
-            listing_type="sale",
-            price=cards_by_code[DEMO_LISTING_CODES["sale"]].price,
-            featured=True,
-            status="active",
-        )
-    )
-    db.add(
-        Listing(
-            seller_id=seller2.id,
-            card_id=cards_by_code[DEMO_LISTING_CODES["trade"]].id,
-            listing_type="trade",
-            price=None,
-            wants="Luffy Leader o Zoro",
-            featured=False,
-            status="active",
-        )
-    )
-    db.add(
-        Listing(
-            seller_id=seller.id,
-            card_id=cards_by_code[DEMO_LISTING_CODES["combo"]].id,
-            listing_type="combo",
-            price=cards_by_code[DEMO_LISTING_CODES["combo"]].price,
-            wants="Shanks + dinero",
-            featured=True,
-            status="active",
-        )
-    )
+        cards.append(card)
     db.commit()
+    return cards
+
+
+def _pick_default_set_id() -> str:
+    """El ultimo set lanzado segun /allSets/, o OP-01 si esa consulta falla."""
+    try:
+        sets = fetch_all_sets()
+        if sets:
+            return sets[-1]["set_id"]
+    except Exception:
+        pass
+    return DEFAULT_SET_ID
+
+
+def seed_database(db: Session) -> None:
+    if db.query(Card).count() > 0:
+        return
+
+    demo = User(username="demo", password_hash=hash_password("demo123"))
+    seller = User(username="ColeccionAR", password_hash=hash_password("demo123"))
+    seller2 = User(username="TCG_BA", password_hash=hash_password("demo123"))
+    db.add_all([demo, seller, seller2])
+    db.flush()
+
+    default_set_id = _pick_default_set_id()
+    try:
+        cards = ensure_set_cards(db, default_set_id)
+    except Exception:
+        # Ultimo respaldo: OP-01 siempre tiene snapshot local, no depende de red.
+        cards = ensure_set_cards(db, DEFAULT_SET_ID)
+
+    top = sorted(cards, key=lambda c: c.price, reverse=True)[:3]
+    if len(top) >= 3:
+        db.add(
+            Listing(
+                seller_id=seller.id,
+                card_id=top[0].id,
+                listing_type="sale",
+                price=top[0].price,
+                featured=True,
+                status="active",
+            )
+        )
+        db.add(
+            Listing(
+                seller_id=seller2.id,
+                card_id=top[1].id,
+                listing_type="trade",
+                price=None,
+                wants="Busco otras cartas top del set",
+                featured=False,
+                status="active",
+            )
+        )
+        db.add(
+            Listing(
+                seller_id=seller.id,
+                card_id=top[2].id,
+                listing_type="combo",
+                price=top[2].price,
+                wants="Carta + dinero",
+                featured=True,
+                status="active",
+            )
+        )
+        db.commit()

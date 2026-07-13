@@ -29,7 +29,11 @@ const state = {
   previewUrl: null,
   toastTimer: null,
   loading: false,
+  catalogSets: null,
+  catalogSetId: null,
+  catalogCardsSetId: null,
   catalogCards: null,
+  catalogLoading: false,
 };
 
 const app = document.getElementById("app");
@@ -322,11 +326,22 @@ function catalogListHtml(cards) {
 
 function renderCatalog() {
   const cards = state.catalogCards || [];
+  const sets = state.catalogSets || [];
+  const options = sets
+    .map(
+      (s) =>
+        `<option value="${s.set_id}"${s.set_id === state.catalogSetId ? " selected" : ""}>${s.set_name} (${s.set_id})</option>`
+    )
+    .join("");
+  const listHtml = state.catalogLoading
+    ? '<li class="empty-state">Cargando cartas del set…</li>'
+    : catalogListHtml(cards);
   return `
     <h2 class="page-title">Catálogo</h2>
-    <p class="page-sub">${cards.length} cartas · One Piece OP-01</p>
+    <p class="page-sub">${state.catalogLoading ? "Cargando…" : `${cards.length} cartas`}</p>
+    <select class="auth-input" id="catalog-set-select" style="width:100%;margin-bottom:0.5rem">${options}</select>
     <input class="auth-input" id="catalog-search" placeholder="Buscar por nombre, set o rareza..." style="width:100%;margin-bottom:0.75rem" />
-    <ul class="scan-list" id="catalog-list">${catalogListHtml(cards)}</ul>
+    <ul class="scan-list" id="catalog-list">${listHtml}</ul>
   `;
 }
 
@@ -503,14 +518,28 @@ async function loadHomeData() {
   }
 }
 
-async function loadCatalog() {
-  if (state.catalogCards) return;
+async function loadCatalogSets() {
+  if (state.catalogSets) return;
   try {
-    state.catalogCards = await api("/cards");
+    const data = await api("/catalog/sets");
+    state.catalogSets = data.sets || [];
+    state.catalogSetId = data.default_set_id;
+  } catch (e) {
+    state.catalogSets = [];
+    showToast(e.message);
+  }
+}
+
+async function loadCatalogCards(setId) {
+  state.catalogLoading = true;
+  try {
+    state.catalogCards = await api(`/cards?set_id=${encodeURIComponent(setId)}`);
+    state.catalogCardsSetId = setId;
   } catch (e) {
     state.catalogCards = [];
     showToast(e.message);
   }
+  state.catalogLoading = false;
 }
 
 async function loadMarket() {
@@ -543,7 +572,12 @@ async function navigate(screen) {
   }
   try {
     if (screen === "home") await loadHomeData();
-    if (screen === "catalog") await loadCatalog();
+    if (screen === "catalog") {
+      await loadCatalogSets();
+      if (state.catalogSetId && state.catalogCardsSetId !== state.catalogSetId) {
+        await loadCatalogCards(state.catalogSetId);
+      }
+    }
     if (screen === "market") await loadMarket();
     if (screen === "collection") await loadCollection();
     if (screen === "profile" && isLoggedIn()) await loadStats();
@@ -700,6 +734,14 @@ function bindEvents() {
 
   document.querySelectorAll(".scan-item[data-card-id]").forEach((el) => {
     el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
+  });
+
+  document.getElementById("catalog-set-select")?.addEventListener("change", async (e) => {
+    state.catalogSetId = e.target.value;
+    state.catalogLoading = true;
+    render();
+    await loadCatalogCards(state.catalogSetId);
+    if (state.screen === "catalog") render();
   });
 
   document.getElementById("catalog-search")?.addEventListener("input", (e) => {
