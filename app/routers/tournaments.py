@@ -34,6 +34,17 @@ def list_tournaments(db: Session = Depends(get_db)):
     return [_to_out(t) for t in tournaments]
 
 
+@router.get("/mine", response_model=list[TournamentOut])
+def list_my_tournaments(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    tournaments = (
+        db.query(Tournament)
+        .filter(Tournament.organizer_id == user.id)
+        .order_by(Tournament.created_at.desc())
+        .all()
+    )
+    return [_to_out(t) for t in tournaments]
+
+
 @router.post("", response_model=TournamentOut, status_code=status.HTTP_201_CREATED)
 def create_tournament(
     payload: TournamentCreate,

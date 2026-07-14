@@ -39,6 +39,7 @@ const state = {
   scanSearchQuery: "",
   scanSearchCards: null,
   scanSearchLoading: false,
+  myTournaments: null,
 };
 
 const app = document.getElementById("app");
@@ -489,19 +490,23 @@ function renderCatalog() {
   `;
 }
 
+function tournamentCardHtml(t) {
+  return `
+    <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #f59e0b33">
+      <div class="scan-info" style="flex:1">
+        <div class="scan-name" style="color:#f59e0b">${t.title}</div>
+        <div class="scan-set">${icon("store", "icon-inline")} ${t.organizer_username}${t.event_date ? ` · ${icon("calendar", "icon-inline")} ${t.event_date}` : ""}</div>
+        ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
+        ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
+      </div>
+    </div>`;
+}
+
 function renderMarket() {
   const tournamentsHtml = (state.tournaments || []).length > 0
     ? `<div style="margin-bottom:1rem">
         <p class="page-sub" style="font-weight:600;margin-bottom:0.5rem">${icon("trophy", "icon-inline")} Torneos activos</p>
-        ${(state.tournaments || []).map((t) => `
-        <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #f59e0b33">
-          <div class="scan-info" style="flex:1">
-            <div class="scan-name" style="color:#f59e0b">${t.title}</div>
-            <div class="scan-set">${icon("store", "icon-inline")} ${t.organizer_username}${t.event_date ? ` · ${icon("calendar", "icon-inline")} ${t.event_date}` : ""}</div>
-            ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
-            ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
-          </div>
-        </div>`).join("")}
+        ${(state.tournaments || []).map(tournamentCardHtml).join("")}
         <p class="page-sub" style="font-weight:600;margin:1rem 0 0.5rem">${icon("shopping-bag", "icon-inline")} Publicaciones</p>
       </div>`
     : "";
@@ -541,6 +546,18 @@ function renderMarket() {
     <p class="page-sub" style="margin-top:1rem;font-size:0.75rem">
       Publicá cartas desde el resultado del escaneo con el botón <strong>Publicar</strong>.
     </p>
+  `;
+}
+
+function renderMyTournaments() {
+  const tournaments = state.myTournaments || [];
+  const list = tournaments.length
+    ? `<div class="market-grid">${tournaments.map(tournamentCardHtml).join("")}</div>`
+    : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>Todavía no publicaste ningún torneo.</p></div>`;
+  return `
+    <h2 class="page-title">Mis Torneos</h2>
+    <p class="page-sub">Torneos que publicaste como tienda</p>
+    ${list}
   `;
 }
 
@@ -600,8 +617,16 @@ function renderProfile() {
           <div class="menu-desc">Crear un torneo visible para todos los usuarios</div>
         </div>
         ${icon("chevron-right", "menu-arrow")}
+       </li>
+       <li class="menu-item" data-go="my-tournaments">
+        <div class="menu-icon">${icon("clipboard-list")}</div>
+        <div class="menu-text">
+          <div class="menu-title">Mis Torneos</div>
+          <div class="menu-desc">Torneos que publicaste</div>
+        </div>
+        ${icon("chevron-right", "menu-arrow")}
        </li>`
-    : `<li class="menu-item" data-action="tournaments">
+    : `<li class="menu-item" data-go="market">
         <div class="menu-icon">${icon("trophy")}</div>
         <div class="menu-text">
           <div class="menu-title">Torneos</div>
@@ -695,6 +720,7 @@ function render() {
     catalog: renderCatalog,
     collection: renderCollection,
     market: renderMarket,
+    "my-tournaments": renderMyTournaments,
     profile: renderProfile,
     auth: renderAuth,
   };
@@ -758,6 +784,15 @@ async function loadMarket() {
   }
 }
 
+async function loadMyTournaments() {
+  if (!isLoggedIn()) return;
+  try {
+    state.myTournaments = await api("/tournaments/mine");
+  } catch {
+    state.myTournaments = [];
+  }
+}
+
 async function loadCollection() {
   if (!isLoggedIn()) return;
   state.collection = await api("/collection");
@@ -790,6 +825,7 @@ async function navigate(screen) {
       }
     }
     if (screen === "market") await loadMarket();
+    if (screen === "my-tournaments") await loadMyTournaments();
     if (screen === "collection") await loadCollection();
     if (screen === "profile" && isLoggedIn()) await loadStats();
   } catch (e) {
@@ -1135,7 +1171,6 @@ function bindEvents() {
       const labels = {
         alerts: isPremium ? "Alertas de precio: configurá notificaciones desde la app móvil" : "Alertas de precio (función premium — iniciá sesión como usuario premium)",
         deck: isPremium ? "Análisis de mazo: próximamente disponible" : "Análisis de mazo (función premium — iniciá sesión como usuario premium)",
-        tournaments: "Ver torneos activos en la pestaña Mercado",
       };
       showToast(labels[action] || "Próximamente");
     });
