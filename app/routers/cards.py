@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import random
 from typing import Optional
@@ -14,6 +15,7 @@ from ..schemas import CardOut, PriceHistoryOut, ScanOut
 from ..seed import ensure_set_cards
 
 router = APIRouter(prefix="/api", tags=["cards"])
+logger = logging.getLogger("tcg_trade.scan")
 
 
 def card_to_out(card: Card) -> CardOut:
@@ -59,11 +61,16 @@ AI_VISION_PROVIDERS = [
 async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[Optional[Card], Optional[str]]:
     """Identificacion por vision AI. Prueba los proveedores configurados en
     orden (ver AI_VISION_PROVIDERS) y devuelve (carta, metodo), o (None, None)
-    para caer a la simulacion si ninguno esta configurado o falla."""
-    catalog = "\n".join(f"- {c.code}: {c.name} ({c.game})" for c in cards)
+    para caer a la simulacion si ninguno esta configurado o falla.
+
+    No le mandamos el catalogo completo al modelo (con cientos de cartas
+    cacheadas localmente el prompt explota y el modelo gasta el limite de
+    tokens "pensando" antes de contestar). Le pedimos que identifique la
+    carta con su propio conocimiento y despues buscamos el match nosotros."""
     for provider in AI_VISION_PROVIDERS:
         api_key = os.getenv(provider["env"])
         if not api_key:
+            logger.info("Proveedor %s sin API key configurada, se salta.", provider["method"])
             continue
         try:
             import base64
@@ -83,8 +90,10 @@ async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[
                             {
                                 "type": "text",
                                 "text": (
-                                    "Identify the TCG card in this image. Reply with ONLY the card code "
-                                    f"from this catalog, or UNKNOWN if unsure:\n{catalog}"
+                                    "Identify the One Piece TCG card in this image. Reply with ONLY the "
+                                    "character name and the card's set code/number if visible "
+                                    "(e.g. 'Monkey D. Luffy OP01-003'), or UNKNOWN if you can't tell. "
+                                    "No explanation, no reasoning, just the answer."
                                 ),
                             },
                             {
@@ -95,14 +104,17 @@ async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[
                     }
                 ],
                 # Gemini gasta tokens de "razonamiento" antes de emitir texto
-                # visible; con un limite bajo la respuesta queda vacia.
-                max_tokens=300,
+                # visible; con un limite bajo la respuesta queda vacia/cortada.
+                max_tokens=1500,
             )
             text = (response.choices[0].message.content or "").strip().upper()
+            logger.info("Respuesta de %s: %r", provider["method"], text)
             for card in cards:
                 if card.code.upper() in text or card.name.upper() in text:
                     return card, provider["method"]
+            logger.info("%s no matcheo ninguna carta del catalogo (%d cartas)", provider["method"], len(cards))
         except Exception:
+            logger.exception("Fallo el proveedor %s", provider["method"])
             continue
     return None, None
 

@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -8,6 +9,8 @@ from fastapi.responses import FileResponse
 from .database import Base, SessionLocal, engine
 from .routers import cards, collection, market, tournaments, users
 from .seed import seed_database
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 mimetypes.add_type("text/css", ".css")
 mimetypes.add_type("application/javascript", ".js")
