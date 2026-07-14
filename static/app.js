@@ -24,6 +24,7 @@ const state = {
   recentScans: [],
   collection: null,
   listings: [],
+  marketSearchQuery: "",
   tournaments: [],
   stats: null,
   authMode: "login",
@@ -500,37 +501,126 @@ function tournamentCardHtml(t) {
     </div>`;
 }
 
+function listingMatchesQuery(listing, q) {
+  if (!q) return true;
+  const c = listing.card || {};
+  const haystack = [
+    c.name,
+    c.game,
+    c.set_name,
+    c.code,
+    c.rarity,
+    listing.seller_username,
+    listing.listing_type,
+    typeLabel(listing.listing_type),
+    listing.wants,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
+function listingCardHtml(l) {
+  const c = l.card;
+  const priceText =
+    l.listing_type === "trade" || l.price == null ? "Solo intercambio" : `$${formatPrice(l.price)}`;
+  return `
+    <div class="market-card" data-listing-id="${l.id}">
+      <div class="scan-thumb">${thumbHtml(c)}</div>
+      <div class="scan-info">
+        <div class="scan-name">${c.name}</div>
+        <div class="scan-set">${l.seller_username} · ${typeLabel(l.listing_type)}</div>
+        ${l.wants ? `<div class="scan-set">Busca: ${l.wants}</div>` : ""}
+        ${l.featured ? '<span class="market-badge">Destacada</span>' : ""}
+        <div class="market-actions">
+          <button class="btn btn-outline btn-mini" data-reserve="${l.id}">Reservar</button>
+          <button class="btn btn-primary btn-mini" data-offer="${l.id}">Ofertar</button>
+        </div>
+      </div>
+      <div class="scan-price-col">
+        <div class="scan-price">${priceText}</div>
+      </div>
+    </div>`;
+}
+
+function marketListHtml(listings) {
+  if (!listings.length) {
+    const emptyMsg = state.marketSearchQuery
+      ? "No hay publicaciones que coincidan con tu búsqueda."
+      : "No hay publicaciones aún.";
+    return `<div class="empty-state"><div class="empty-icon">${icon("shopping-bag")}</div><p>${emptyMsg}</p></div>`;
+  }
+  return listings.map(listingCardHtml).join("");
+}
+
+function filteredMarketListings() {
+  const q = (state.marketSearchQuery || "").trim().toLowerCase();
+  return (state.listings || []).filter((l) => listingMatchesQuery(l, q));
+}
+
+function bindMarketActions(root = document) {
+  root.querySelectorAll("[data-reserve]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      if (!(await requireAuth("reservar"))) return;
+      try {
+        await api(`/market/listings/${el.dataset.reserve}/reserve`, { method: "POST" });
+        showToast("Reserva creada");
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
+
+  root.querySelectorAll("[data-offer]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      if (!(await requireAuth("ofertar"))) return;
+      const result = await openModal({
+        title: "Hacer una oferta",
+        confirmLabel: "Ofertar",
+        fields: [
+          { name: "money", label: "Oferta en dinero (ARS)", type: "number", placeholder: "Opcional" },
+          { name: "cardsOffer", label: "Cartas a ofrecer", type: "text", placeholder: "Opcional" },
+        ],
+      });
+      if (!result) return;
+      try {
+        await api(`/market/listings/${el.dataset.offer}/offers`, {
+          method: "POST",
+          json: {
+            money_offer: result.money ? Number(result.money) : null,
+            cards_offer: result.cardsOffer || null,
+          },
+        });
+        showToast("Oferta enviada");
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
+}
+
 function renderMarket() {
-  const listings = (state.listings || [])
-    .map((l) => {
-      const c = l.card;
-      const priceText =
-        l.listing_type === "trade" || l.price == null ? "Solo intercambio" : `$${formatPrice(l.price)}`;
-      return `
-      <div class="market-card" data-listing-id="${l.id}">
-        <div class="scan-thumb">${thumbHtml(c)}</div>
-        <div class="scan-info">
-          <div class="scan-name">${c.name}</div>
-          <div class="scan-set">${l.seller_username} · ${typeLabel(l.listing_type)}</div>
-          ${l.wants ? `<div class="scan-set">Busca: ${l.wants}</div>` : ""}
-          ${l.featured ? '<span class="market-badge">Destacada</span>' : ""}
-          <div class="market-actions">
-            <button class="btn btn-outline btn-mini" data-reserve="${l.id}">Reservar</button>
-            <button class="btn btn-primary btn-mini" data-offer="${l.id}">Ofertar</button>
-          </div>
-        </div>
-        <div class="scan-price-col">
-          <div class="scan-price">${priceText}</div>
-        </div>
-      </div>`;
-    })
-    .join("");
+  const filtered = filteredMarketListings();
+  const total = (state.listings || []).length;
+  const sub =
+    state.marketSearchQuery.trim()
+      ? `${filtered.length} de ${total} publicaciones`
+      : "Reservas · Ofertas · Negociación";
 
   return `
     <h2 class="page-title">Mercado</h2>
-    <p class="page-sub">Reservas · Ofertas · Negociación</p>
-    <div class="market-grid">
-      ${listings || `<div class="empty-state"><div class="empty-icon">${icon("shopping-bag")}</div><p>No hay publicaciones aún.</p></div>`}
+    <p class="page-sub">${sub}</p>
+    <div class="search-box" style="margin-bottom:0.85rem">
+      ${icon("search", "search-icon")}
+      <input class="auth-input search-input" id="market-search"
+        placeholder="Buscar por carta, vendedor, set o tipo..."
+        value="${state.marketSearchQuery.replace(/"/g, "&quot;")}" />
+    </div>
+    <div class="market-grid" id="market-list">
+      ${marketListHtml(filtered)}
     </div>
     <p class="page-sub" style="margin-top:1rem;font-size:0.75rem">
       Publicá cartas desde el resultado del escaneo con el botón <strong>Publicar</strong>.
@@ -1104,46 +1194,24 @@ function bindEvents() {
     });
   });
 
-  document.querySelectorAll("[data-reserve]").forEach((el) => {
-    el.addEventListener("click", async (ev) => {
-      ev.stopPropagation();
-      if (!(await requireAuth("reservar"))) return;
-      try {
-        await api(`/market/listings/${el.dataset.reserve}/reserve`, { method: "POST" });
-        showToast("Reserva creada");
-      } catch (e) {
-        showToast(e.message);
-      }
-    });
+  document.getElementById("market-search")?.addEventListener("input", (e) => {
+    state.marketSearchQuery = e.target.value;
+    const list = document.getElementById("market-list");
+    const sub = document.querySelector(".page-sub");
+    if (!list) return;
+    const filtered = filteredMarketListings();
+    const total = (state.listings || []).length;
+    list.innerHTML = marketListHtml(filtered);
+    if (sub) {
+      sub.textContent = state.marketSearchQuery.trim()
+        ? `${filtered.length} de ${total} publicaciones`
+        : "Reservas · Ofertas · Negociación";
+    }
+    bindMarketActions(list);
+    refreshIcons();
   });
 
-  document.querySelectorAll("[data-offer]").forEach((el) => {
-    el.addEventListener("click", async (ev) => {
-      ev.stopPropagation();
-      if (!(await requireAuth("ofertar"))) return;
-      const result = await openModal({
-        title: "Hacer una oferta",
-        confirmLabel: "Ofertar",
-        fields: [
-          { name: "money", label: "Oferta en dinero (ARS)", type: "number", placeholder: "Opcional" },
-          { name: "cardsOffer", label: "Cartas a ofrecer", type: "text", placeholder: "Opcional" },
-        ],
-      });
-      if (!result) return;
-      try {
-        await api(`/market/listings/${el.dataset.offer}/offers`, {
-          method: "POST",
-          json: {
-            money_offer: result.money ? Number(result.money) : null,
-            cards_offer: result.cardsOffer || null,
-          },
-        });
-        showToast("Oferta enviada");
-      } catch (e) {
-        showToast(e.message);
-      }
-    });
-  });
+  bindMarketActions();
 
   document.querySelectorAll("[data-action]").forEach((el) => {
     el.addEventListener("click", async () => {
