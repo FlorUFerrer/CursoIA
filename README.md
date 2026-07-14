@@ -45,6 +45,7 @@ También existen vendedores seed: `ColeccionAR` / `TCG_BA` (misma contraseña).
 - Por defecto: identificación **simulada** contra la base SQLite.
 - Si configurás `GEMINI_API_KEY` (gratis en [Google AI Studio](https://aistudio.google.com/apikey), sin tarjeta), el backend intenta visión con Gemini y cae a simulación si falla.
 - También soporta `OPENAI_API_KEY` como alternativa/fallback si preferís OpenAI.
+- Para probar el escaneo real sin tener una carta física a mano, usá la foto de ejemplo incluida en el repo: [`carta_image.jpeg`](carta_image.jpeg) (subila desde la pantalla Escanear).
 
 ## Estructura
 
