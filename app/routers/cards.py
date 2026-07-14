@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from ..auth import get_optional_user
 from ..database import get_db
 from ..models import Card, Scan, User
-from ..optcg_client import DEFAULT_SET_ID, fetch_all_sets
+from ..optcg_client import DEFAULT_SET_ID, list_all_sets
 from ..schemas import CardOut, PriceHistoryOut, ScanOut
 from ..seed import ensure_set_cards
 
@@ -169,7 +169,7 @@ def identify_card_simulated(image_bytes: bytes, cards: list[Card]) -> Card:
 def catalog_sets():
     """Lista de sets de One Piece TCG disponibles, para el selector del catalogo."""
     try:
-        sets = fetch_all_sets()
+        sets = list_all_sets()
     except Exception:
         sets = []
     default_set_id = sets[-1]["set_id"] if sets else DEFAULT_SET_ID

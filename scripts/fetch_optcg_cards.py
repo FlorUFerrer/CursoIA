@@ -1,27 +1,50 @@
-"""Regenera el snapshot local data/optcg_op01_raw.json desde optcgapi.com.
+"""Regenera el snapshot local con el catalogo completo de optcgapi.com:
+data/optcg_all_sets.json (cartas de los 21 sets) y data/optcg_sets_meta.json
+(lista de sets con su nombre bonito).
 
-La app YA NO depende de este archivo en el uso normal: en cada arranque
-(cuando la tabla de cartas esta vacia) pide el set OP-01 en vivo a la API
-(ver app/optcg_client.py). Este JSON solo se usa como respaldo si esa
-llamada en vivo falla (API caida, sin red, etc).
+Es un script manual: la app NO llama a esto por si sola. El seed y el
+Catalogo sirven todo desde estos archivos commiteados al repo; si aparece
+un set nuevo que no esta aca, la app cae sola a traerlo en vivo como
+respaldo (ver app/optcg_client.py). Correr este script de nuevo solo si
+queres refrescar precios/actualizar a sets recien lanzados:
 
-Uso (para actualizar el respaldo manualmente):
     python scripts/fetch_optcg_cards.py
 """
 import json
+import time
 import urllib.request
 
-from app.optcg_client import FALLBACK_JSON, SET_ID, normalize_set
+from app.optcg_client import BUNDLED_SETS_JSON, BUNDLED_SETS_META_JSON, normalize_set
+
+REQUEST_DELAY_SECONDS = 0.8
+
+
+def fetch_set_raw(set_id: str) -> list[dict]:
+    url = f"https://optcgapi.com/api/sets/{set_id}/"
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        return json.load(resp)
 
 
 def main() -> None:
-    url = f"https://optcgapi.com/api/sets/{SET_ID}/"
-    with urllib.request.urlopen(url, timeout=30) as resp:
-        raw = json.load(resp)
-    cards = normalize_set(raw)
-    FALLBACK_JSON.parent.mkdir(exist_ok=True)
-    FALLBACK_JSON.write_text(json.dumps(cards, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Guardadas {len(cards)} cartas en {FALLBACK_JSON}")
+    with urllib.request.urlopen("https://optcgapi.com/api/allSets/", timeout=30) as resp:
+        sets = json.load(resp)
+    print(f"{len(sets)} sets a traer")
+
+    all_sets: dict[str, list[dict]] = {}
+    for entry in sets:
+        set_id = entry["set_id"]
+        cards = normalize_set(fetch_set_raw(set_id))
+        all_sets[set_id] = cards
+        print(f"  {set_id}: {len(cards)} cartas")
+        time.sleep(REQUEST_DELAY_SECONDS)
+
+    BUNDLED_SETS_JSON.parent.mkdir(exist_ok=True)
+    BUNDLED_SETS_JSON.write_text(json.dumps(all_sets, ensure_ascii=False), encoding="utf-8")
+    BUNDLED_SETS_META_JSON.write_text(json.dumps(sets, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    total = sum(len(v) for v in all_sets.values())
+    print(f"Guardadas {total} cartas de {len(all_sets)} sets en {BUNDLED_SETS_JSON}")
+    print(f"Guardados metadatos de {len(sets)} sets en {BUNDLED_SETS_META_JSON}")
 
 
 if __name__ == "__main__":

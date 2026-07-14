@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from .auth import hash_password
 from .models import Card, Listing, PriceHistory, Tournament, User
-from .optcg_client import DEFAULT_SET_ID, fetch_all_sets, fetch_set_cards
+from .optcg_client import DEFAULT_SET_ID, bundled_set_ids, fetch_set_cards, list_all_sets, load_bundled_set
 from .pricing import USD_ARS_RATE
 
 HISTORY_LABELS = ("may 1", "may 15", "jun 1", "hoy")
@@ -58,17 +58,23 @@ def _build_card_rows(raw_entries: list[dict]) -> list[dict]:
 
 
 def ensure_set_cards(db: Session, set_id: str) -> list[Card]:
-    """Devuelve las cartas de un set. La primera vez que se pide un set, lo
-    trae de la API y lo guarda en la base; las siguientes veces se sirve
-    directo desde ahi (no se vuelve a pedir a optcgapi.com)."""
+    """Devuelve las cartas de un set. Se sirven del snapshot local commiteado
+    (data/optcg_all_sets.json) sin pegarle a la API; si un set no esta ahi
+    (por ejemplo uno nuevo lanzado despues del snapshot), se trae en vivo
+    como respaldo. Una vez en la base, las siguientes veces se sirve de ahi
+    directo (no se vuelve a pedir nada, ni local ni en vivo)."""
     existing = (
         db.query(Card).options(joinedload(Card.history)).filter(Card.set_name == set_id).all()
     )
     if existing:
         return existing
 
+    raw_entries = load_bundled_set(set_id)
+    if raw_entries is None:
+        raw_entries = fetch_set_cards(set_id)
+
     cards = []
-    for raw in _build_card_rows(fetch_set_cards(set_id)):
+    for raw in _build_card_rows(raw_entries):
         # Algunos sets incluyen como "bonus" reprints especiales cuyo codigo
         # pertenece a otro set ya cacheado (ver cartas "(SP)" de optcgapi.com).
         # Si el codigo ya existe, reusamos esa fila en vez de insertar de
@@ -97,9 +103,9 @@ def ensure_set_cards(db: Session, set_id: str) -> list[Card]:
 
 
 def _pick_default_set_id() -> str:
-    """El ultimo set lanzado segun /allSets/, o OP-01 si esa consulta falla."""
+    """El ultimo set lanzado segun el snapshot local, o OP-01 si no hay nada."""
     try:
-        sets = fetch_all_sets()
+        sets = list_all_sets()
         if sets:
             return sets[-1]["set_id"]
     except Exception:
@@ -146,10 +152,18 @@ def seed_database(db: Session) -> None:
         db.commit()
         return
 
-    default_set_id = _pick_default_set_id()
-    try:
-        cards = ensure_set_cards(db, default_set_id)
-    except Exception:
+    # Sembramos el catalogo completo (los 21 sets del snapshot local) de una
+    # sola vez, sin pegarle a la API externa. Si por algun motivo el
+    # snapshot no esta disponible, caemos a traer solo el set mas reciente.
+    set_ids = bundled_set_ids() or [_pick_default_set_id()]
+    cards: list[Card] = []
+    for set_id in set_ids:
+        try:
+            cards.extend(ensure_set_cards(db, set_id))
+        except Exception:
+            continue
+
+    if not cards:
         # Ultimo respaldo: OP-01 siempre tiene snapshot local, no depende de red.
         cards = ensure_set_cards(db, DEFAULT_SET_ID)
 

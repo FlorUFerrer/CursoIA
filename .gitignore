@@ -1,6 +1,7 @@
 data/*
 !data/.gitkeep
-!data/optcg_op01_raw.json
+!data/optcg_all_sets.json
+!data/optcg_sets_meta.json
 __pycache__/
 *.py[cod]
 *.db
