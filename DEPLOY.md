@@ -29,7 +29,7 @@ Si ya tenés el repo conectado (como este), simplemente `git push`.
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 5. En **Variables** (opcional):
    - `SECRET_KEY` = cualquier string largo aleatorio
-   - `OPENAI_API_KEY` = solo si querés IA real en el escaneo
+   - `GEMINI_API_KEY` = solo si querés IA real en el escaneo (gratis, sin tarjeta, en [Google AI Studio](https://aistudio.google.com/apikey))
 6. Railway asigna una URL pública en **Settings → Networking → Generate Domain** (tipo `https://tcg-trade-production-xxxx.up.railway.app`).
 7. Cada `git push` a la rama conectada dispara un redeploy automático.
 

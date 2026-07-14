@@ -43,7 +43,8 @@ También existen vendedores seed: `ColeccionAR` / `TCG_BA` (misma contraseña).
 ### Escaneo híbrido (IA)
 
 - Por defecto: identificación **simulada** contra la base SQLite.
-- Si configurás `OPENAI_API_KEY`, el backend intenta visión con OpenAI y cae a simulación si falla.
+- Si configurás `GEMINI_API_KEY` (gratis en [Google AI Studio](https://aistudio.google.com/apikey), sin tarjeta), el backend intenta visión con Gemini y cae a simulación si falla.
+- También soporta `OPENAI_API_KEY` como alternativa/fallback si preferís OpenAI.
 
 ## Estructura
 
@@ -65,7 +66,7 @@ render.yaml
    - **Start**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 4. Variables opcionales:
    - `SECRET_KEY` (recomendado; o usá el `render.yaml` que la genera)
-   - `OPENAI_API_KEY` (solo si querés escaneo con IA real)
+   - `GEMINI_API_KEY` (solo si querés escaneo con IA real, gratis en Google AI Studio)
 
 También podés usar **Blueprint** con el archivo `render.yaml` incluido.
 

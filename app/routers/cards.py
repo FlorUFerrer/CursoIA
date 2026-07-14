@@ -36,47 +36,75 @@ def card_to_out(card: Card) -> CardOut:
     )
 
 
-async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> Optional[Card]:
-    """Optional OpenAI vision identification. Returns None to fall back to simulated scan."""
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    try:
-        import base64
-        from openai import OpenAI
+# Proveedores de vision AI probados en orden. Gemini primero: tiene tier
+# gratuito estable (sin tarjeta) via su endpoint compatible con OpenAI.
+AI_VISION_PROVIDERS = [
+    {
+        "env": "GEMINI_API_KEY",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "model_env": "GEMINI_VISION_MODEL",
+        "default_model": "gemini-flash-latest",
+        "method": "gemini",
+    },
+    {
+        "env": "OPENAI_API_KEY",
+        "base_url": None,
+        "model_env": "OPENAI_VISION_MODEL",
+        "default_model": "gpt-4o-mini",
+        "method": "openai",
+    },
+]
 
-        client = OpenAI(api_key=api_key)
-        b64 = base64.b64encode(image_bytes).decode("utf-8")
-        catalog = "\n".join(f"- {c.code}: {c.name} ({c.game})" for c in cards)
-        response = client.chat.completions.create(
-            model=os.getenv("OPENAI_VISION_MODEL", "gpt-4o-mini"),
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": (
-                                "Identify the TCG card in this image. Reply with ONLY the card code "
-                                f"from this catalog, or UNKNOWN if unsure:\n{catalog}"
-                            ),
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
-                        },
-                    ],
-                }
-            ],
-            max_tokens=50,
-        )
-        text = (response.choices[0].message.content or "").strip().upper()
-        for card in cards:
-            if card.code.upper() in text or card.name.upper() in text:
-                return card
-    except Exception:
-        return None
-    return None
+
+async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[Optional[Card], Optional[str]]:
+    """Identificacion por vision AI. Prueba los proveedores configurados en
+    orden (ver AI_VISION_PROVIDERS) y devuelve (carta, metodo), o (None, None)
+    para caer a la simulacion si ninguno esta configurado o falla."""
+    catalog = "\n".join(f"- {c.code}: {c.name} ({c.game})" for c in cards)
+    for provider in AI_VISION_PROVIDERS:
+        api_key = os.getenv(provider["env"])
+        if not api_key:
+            continue
+        try:
+            import base64
+            from openai import OpenAI
+
+            client_kwargs = {"api_key": api_key}
+            if provider["base_url"]:
+                client_kwargs["base_url"] = provider["base_url"]
+            client = OpenAI(**client_kwargs)
+            b64 = base64.b64encode(image_bytes).decode("utf-8")
+            response = client.chat.completions.create(
+                model=os.getenv(provider["model_env"], provider["default_model"]),
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "Identify the TCG card in this image. Reply with ONLY the card code "
+                                    f"from this catalog, or UNKNOWN if unsure:\n{catalog}"
+                                ),
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                            },
+                        ],
+                    }
+                ],
+                # Gemini gasta tokens de "razonamiento" antes de emitir texto
+                # visible; con un limite bajo la respuesta queda vacia.
+                max_tokens=300,
+            )
+            text = (response.choices[0].message.content or "").strip().upper()
+            for card in cards:
+                if card.code.upper() in text or card.name.upper() in text:
+                    return card, provider["method"]
+        except Exception:
+            continue
+    return None, None
 
 
 def identify_card_simulated(image_bytes: bytes, cards: list[Card]) -> Card:
@@ -174,10 +202,10 @@ async def scan_card(
 
     method = "simulated"
     card = None
-    if image_bytes and os.getenv("OPENAI_API_KEY"):
-        card = await identify_card_with_ai(image_bytes, cards)
+    if image_bytes:
+        card, ai_method = await identify_card_with_ai(image_bytes, cards)
         if card:
-            method = "openai"
+            method = ai_method
 
     if card is None:
         if not image_bytes:

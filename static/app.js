@@ -364,7 +364,7 @@ function renderScanIdle() {
       </button>
     </div>
     <p class="page-sub" style="font-size:0.75rem;margin:0">
-      Sin API key de OpenAI el backend identifica por simulación sobre la base local.
+      Sin API key de IA configurada el backend identifica por simulación sobre la base local.
     </p>
   `;
 }

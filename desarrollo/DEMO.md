@@ -156,5 +156,5 @@ Perfil         → estadísticas del usuario, banner premium, menú de funciones
 
 - **Base de datos:** SQLite en `data/tcg_trade.db`. Los usuarios demo se sincronizan en cada arranque; catálogo, publicaciones y torneo demo solo se siembran si la base está vacía (ver nota al principio).
 - **Precios:** USD × 1500 ARS (tasa hardcodeada en `app/pricing.py`).
-- **Escaneo real:** requiere variable de entorno `OPENAI_API_KEY`. Sin ella, el escaneo es determinístico (simula basado en hash de imagen).
+- **Escaneo real:** requiere variable de entorno `GEMINI_API_KEY` (gratis en Google AI Studio, sin tarjeta) o, como alternativa, `OPENAI_API_KEY`. Sin ninguna de las dos, el escaneo es determinístico (simula basado en hash de imagen).
 - **Datos de cartas:** el catálogo se trae de `optcgapi.com` bajo demanda, cacheado en la base. Al primer arranque se siembra automáticamente **el set más reciente** (hoy OP-16); los otros 20 sets se piden a la API recién la primera vez que alguien los elige en el selector del Catálogo (`GET /api/cards?set_id=...`), y quedan guardados para las próximas veces. Si no hay red al arrancar, cae de respaldo al snapshot local `data/optcg_op01_raw.json` (set OP-01).
