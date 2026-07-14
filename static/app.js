@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { id: "home", label: "Inicio", icon: "home" },
   { id: "scan", label: "Escanear", icon: "scan-line" },
   { id: "catalog", label: "Catálogo", icon: "book-open" },
+  { id: "torneos", label: "Torneos", icon: "trophy" },
   { id: "market", label: "Mercado", icon: "shopping-bag" },
   { id: "profile", label: "Perfil", icon: "user" },
 ];
@@ -40,6 +41,7 @@ const state = {
   scanSearchCards: null,
   scanSearchLoading: false,
   myTournaments: null,
+  tournamentsView: "all",
 };
 
 const app = document.getElementById("app");
@@ -381,20 +383,7 @@ function renderScanResult(card) {
         Carta identificada${state.scanMethod ? ` · ${state.scanMethod}` : ""}
       </div>
     </div>
-    <div class="result-card">
-      ${card.image_url ? `<img src="${card.image_url}" alt="${card.name}" class="result-image" loading="lazy" />` : ""}
-      <div class="result-name">${card.name}</div>
-      <div class="result-meta">${card.game} - ${card.code} - ${card.rarity}</div>
-      <div class="price-row">
-        <div>
-          <span class="price-currency">ARS</span>
-          <span class="price-main">$${formatPrice(card.price)}</span>
-        </div>
-        ${trendHtml(card, true)}
-      </div>
-      ${chartHtml(card.history)}
-    </div>
-    <div class="action-row">
+    <div class="action-row" style="margin-bottom:1rem">
       <button class="btn btn-outline btn-action-row" id="btn-save">
         ${icon("bookmark", "btn-icon")}
         Guardar
@@ -407,6 +396,19 @@ function renderScanResult(card) {
         ${icon("scan-line", "btn-icon")}
         Nueva
       </button>
+    </div>
+    <div class="result-card">
+      ${card.image_url ? `<img src="${card.image_url}" alt="${card.name}" class="result-image" loading="lazy" />` : ""}
+      <div class="result-name">${card.name}</div>
+      <div class="result-meta">${card.game} - ${card.code} - ${card.rarity}</div>
+      <div class="price-row">
+        <div>
+          <span class="price-currency">ARS</span>
+          <span class="price-main">$${formatPrice(card.price)}</span>
+        </div>
+        ${trendHtml(card, true)}
+      </div>
+      ${chartHtml(card.history)}
     </div>
   `;
 }
@@ -503,14 +505,6 @@ function tournamentCardHtml(t) {
 }
 
 function renderMarket() {
-  const tournamentsHtml = (state.tournaments || []).length > 0
-    ? `<div style="margin-bottom:1rem">
-        <p class="page-sub" style="font-weight:600;margin-bottom:0.5rem">${icon("trophy", "icon-inline")} Torneos activos</p>
-        ${(state.tournaments || []).map(tournamentCardHtml).join("")}
-        <p class="page-sub" style="font-weight:600;margin:1rem 0 0.5rem">${icon("shopping-bag", "icon-inline")} Publicaciones</p>
-      </div>`
-    : "";
-
   const listings = (state.listings || [])
     .map((l) => {
       const c = l.card;
@@ -538,9 +532,8 @@ function renderMarket() {
 
   return `
     <h2 class="page-title">Mercado</h2>
-    <p class="page-sub">Reservas · Ofertas · Negociación · Torneos</p>
+    <p class="page-sub">Reservas · Ofertas · Negociación</p>
     <div class="market-grid">
-      ${tournamentsHtml}
       ${listings || `<div class="empty-state"><div class="empty-icon">${icon("shopping-bag")}</div><p>No hay publicaciones aún.</p></div>`}
     </div>
     <p class="page-sub" style="margin-top:1rem;font-size:0.75rem">
@@ -549,14 +542,28 @@ function renderMarket() {
   `;
 }
 
-function renderMyTournaments() {
-  const tournaments = state.myTournaments || [];
+function renderTorneos() {
+  const user = getUser();
+  const isStore = Boolean(user?.is_store);
+  const showMine = isStore && state.tournamentsView === "mine";
+  const tournaments = showMine ? state.myTournaments || [] : state.tournaments || [];
+
+  const tabsHtml = isStore
+    ? `<div class="action-row" style="margin-bottom:1rem">
+        <button class="btn ${state.tournamentsView === "all" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-view="all">Todos</button>
+        <button class="btn ${state.tournamentsView === "mine" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-view="mine">Mis Torneos</button>
+      </div>`
+    : "";
+
+  const emptyMsg = showMine ? "Todavía no publicaste ningún torneo." : "No hay torneos activos por ahora.";
   const list = tournaments.length
     ? `<div class="market-grid">${tournaments.map(tournamentCardHtml).join("")}</div>`
-    : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>Todavía no publicaste ningún torneo.</p></div>`;
+    : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>${emptyMsg}</p></div>`;
+
   return `
-    <h2 class="page-title">Mis Torneos</h2>
-    <p class="page-sub">Torneos que publicaste como tienda</p>
+    <h2 class="page-title">Torneos</h2>
+    <p class="page-sub">${showMine ? "Torneos que publicaste como tienda" : "Torneos activos de tiendas asociadas"}</p>
+    ${tabsHtml}
     ${list}
   `;
 }
@@ -617,23 +624,30 @@ function renderProfile() {
           <div class="menu-desc">Crear un torneo visible para todos los usuarios</div>
         </div>
         ${icon("chevron-right", "menu-arrow")}
-       </li>
-       <li class="menu-item" data-go="my-tournaments">
-        <div class="menu-icon">${icon("clipboard-list")}</div>
+       </li>`
+    : "";
+
+  const alertsItem = isPremium
+    ? `<li class="menu-item" data-action="alerts">
+        <div class="menu-icon">${icon("bell")}</div>
         <div class="menu-text">
-          <div class="menu-title">Mis Torneos</div>
-          <div class="menu-desc">Torneos que publicaste</div>
+          <div class="menu-title">Alertas de precio</div>
+          <div class="menu-desc">Avisos cuando sube o baja una carta</div>
         </div>
         ${icon("chevron-right", "menu-arrow")}
        </li>`
-    : `<li class="menu-item" data-go="market">
-        <div class="menu-icon">${icon("trophy")}</div>
+    : "";
+
+  const deckItem = isPremium
+    ? `<li class="menu-item" data-action="deck">
+        <div class="menu-icon">${icon("bar-chart-3")}</div>
         <div class="menu-text">
-          <div class="menu-title">Torneos</div>
-          <div class="menu-desc">Ver torneos de tiendas asociadas</div>
+          <div class="menu-title">Análisis de mazo</div>
+          <div class="menu-desc">Cartas que faltan · Meta</div>
         </div>
         ${icon("chevron-right", "menu-arrow")}
-       </li>`;
+       </li>`
+    : "";
 
   const subtitleTag = [isStore ? "Tienda" : "", isPremium ? `${icon("crown", "icon-inline")} Premium` : ""]
     .filter(Boolean)
@@ -655,22 +669,8 @@ function renderProfile() {
     ${premiumBlock}
     <ul class="menu-list">
       ${storeMenuItem}
-      <li class="menu-item" data-action="alerts">
-        <div class="menu-icon">${icon("bell")}</div>
-        <div class="menu-text">
-          <div class="menu-title">Alertas de precio${isPremium ? "" : ` ${icon("lock", "icon-inline")}`}</div>
-          <div class="menu-desc">Avisos cuando sube o baja una carta</div>
-        </div>
-        ${icon("chevron-right", "menu-arrow")}
-      </li>
-      <li class="menu-item" data-action="deck">
-        <div class="menu-icon">${icon("bar-chart-3")}</div>
-        <div class="menu-text">
-          <div class="menu-title">Análisis de mazo${isPremium ? "" : ` ${icon("lock", "icon-inline")}`}</div>
-          <div class="menu-desc">Cartas que faltan · Meta</div>
-        </div>
-        ${icon("chevron-right", "menu-arrow")}
-      </li>
+      ${alertsItem}
+      ${deckItem}
     </ul>
   `;
 }
@@ -720,7 +720,7 @@ function render() {
     catalog: renderCatalog,
     collection: renderCollection,
     market: renderMarket,
-    "my-tournaments": renderMyTournaments,
+    torneos: renderTorneos,
     profile: renderProfile,
     auth: renderAuth,
   };
@@ -777,11 +777,6 @@ async function loadMarket() {
   } catch {
     state.listings = [];
   }
-  try {
-    state.tournaments = await api("/tournaments");
-  } catch {
-    state.tournaments = [];
-  }
 }
 
 async function loadMyTournaments() {
@@ -790,6 +785,18 @@ async function loadMyTournaments() {
     state.myTournaments = await api("/tournaments/mine");
   } catch {
     state.myTournaments = [];
+  }
+}
+
+async function loadTorneos() {
+  try {
+    state.tournaments = await api("/tournaments");
+  } catch {
+    state.tournaments = [];
+  }
+  const user = getUser();
+  if (user?.is_store) {
+    await loadMyTournaments();
   }
 }
 
@@ -825,7 +832,7 @@ async function navigate(screen) {
       }
     }
     if (screen === "market") await loadMarket();
-    if (screen === "my-tournaments") await loadMyTournaments();
+    if (screen === "torneos") await loadTorneos();
     if (screen === "collection") await loadCollection();
     if (screen === "profile" && isLoggedIn()) await loadStats();
   } catch (e) {
@@ -1093,6 +1100,16 @@ function bindEvents() {
     el.addEventListener("click", () => navigate(el.dataset.nav));
   });
 
+  document.querySelectorAll("[data-tournaments-view]").forEach((el) => {
+    el.addEventListener("click", async () => {
+      state.tournamentsView = el.dataset.tournamentsView;
+      if (state.tournamentsView === "mine" && !state.myTournaments) {
+        await loadMyTournaments();
+      }
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-reserve]").forEach((el) => {
     el.addEventListener("click", async (ev) => {
       ev.stopPropagation();
@@ -1159,18 +1176,17 @@ function bindEvents() {
               location: result.location || null,
             },
           });
-          showToast("¡Torneo publicado! Ya aparece en el Mercado para todos los usuarios.");
-          await navigate("market");
+          showToast("¡Torneo publicado! Ya aparece en la pestaña Torneos para todos los usuarios.");
+          state.tournamentsView = "mine";
+          await navigate("torneos");
         } catch (e) {
           showToast(e.message);
         }
         return;
       }
-      const user = getUser();
-      const isPremium = user?.is_premium;
       const labels = {
-        alerts: isPremium ? "Alertas de precio: configurá notificaciones desde la app móvil" : "Alertas de precio (función premium — iniciá sesión como usuario premium)",
-        deck: isPremium ? "Análisis de mazo: próximamente disponible" : "Análisis de mazo (función premium — iniciá sesión como usuario premium)",
+        alerts: "Alertas de precio: configurá notificaciones desde la app móvil",
+        deck: "Análisis de mazo: próximamente disponible",
       };
       showToast(labels[action] || "Próximamente");
     });
