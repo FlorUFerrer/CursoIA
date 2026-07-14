@@ -69,6 +69,14 @@ def ensure_set_cards(db: Session, set_id: str) -> list[Card]:
 
     cards = []
     for raw in _build_card_rows(fetch_set_cards(set_id)):
+        # Algunos sets incluyen como "bonus" reprints especiales cuyo codigo
+        # pertenece a otro set ya cacheado (ver cartas "(SP)" de optcgapi.com).
+        # Si el codigo ya existe, reusamos esa fila en vez de insertar de
+        # nuevo (el codigo es UNIQUE, insertarlo de nuevo rompe la sesion).
+        existing_card = db.query(Card).filter(Card.code == raw["code"]).first()
+        if existing_card:
+            cards.append(existing_card)
+            continue
         data = {k: v for k, v in raw.items() if k != "history"}
         history = raw["history"]
         card = Card(**data)

@@ -352,10 +352,6 @@ function renderScanIdle() {
     </div>
     <input type="file" id="scan-file" accept="image/*" capture="environment" hidden />
     <div class="action-row" style="margin-bottom:0.75rem">
-      <button class="btn btn-outline btn-action-row" id="btn-pick-photo">
-        ${icon("camera", "btn-icon")}
-        Foto / Cámara
-      </button>
       <button class="btn btn-primary btn-action-row" id="btn-run-scan">
         ${icon("scan-line", "btn-icon")}
         Escanear
@@ -949,7 +945,7 @@ function bindEvents() {
     el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
   });
 
-  document.getElementById("btn-pick-photo")?.addEventListener("click", () => {
+  document.getElementById("btn-run-scan")?.addEventListener("click", () => {
     document.getElementById("scan-file")?.click();
   });
 
@@ -959,10 +955,8 @@ function bindEvents() {
     state.selectedFile = file;
     if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
     state.previewUrl = URL.createObjectURL(file);
-    render();
+    runScan();
   });
-
-  document.getElementById("btn-run-scan")?.addEventListener("click", () => runScan());
 
   document.getElementById("btn-save")?.addEventListener("click", async () => {
     if (!(await requireAuth("guardar"))) return;

@@ -2,6 +2,7 @@ import hashlib
 import logging
 import os
 import random
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -58,7 +59,19 @@ AI_VISION_PROVIDERS = [
 ]
 
 
-async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[Optional[Card], Optional[str]]:
+# Codigo de carta tipo "OP05-003", "EB01-012", "ST15-005".
+CODE_PATTERN = re.compile(r"\b([A-Z]{2,5}\d{0,3})-(\d{2,4})\b")
+
+
+def _guess_set_id(prefix: str) -> str:
+    """'OP05' -> 'OP-05' (asi se llaman los sets en optcgapi.com)."""
+    m = re.match(r"^([A-Z]+)(\d+)$", prefix)
+    return f"{m.group(1)}-{m.group(2)}" if m else prefix
+
+
+async def identify_card_with_ai(
+    image_bytes: bytes, cards: list[Card], db: Session
+) -> tuple[Optional[Card], Optional[str]]:
     """Identificacion por vision AI. Prueba los proveedores configurados en
     orden (ver AI_VISION_PROVIDERS) y devuelve (carta, metodo), o (None, None)
     para caer a la simulacion si ninguno esta configurado o falla.
@@ -66,7 +79,10 @@ async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[
     No le mandamos el catalogo completo al modelo (con cientos de cartas
     cacheadas localmente el prompt explota y el modelo gasta el limite de
     tokens "pensando" antes de contestar). Le pedimos que identifique la
-    carta con su propio conocimiento y despues buscamos el match nosotros."""
+    carta con su propio conocimiento; si menciona un set que todavia no
+    tenemos cacheado (ej. el usuario escaneo una carta de un set que nadie
+    eligio nunca en el Catalogo), lo traemos on-demand para poder matchear
+    por codigo exacto en vez de "misma carta, otro set" por nombre nomas."""
     for provider in AI_VISION_PROVIDERS:
         api_key = os.getenv(provider["env"])
         if not api_key:
@@ -109,10 +125,28 @@ async def identify_card_with_ai(image_bytes: bytes, cards: list[Card]) -> tuple[
             )
             text = (response.choices[0].message.content or "").strip().upper()
             logger.info("Respuesta de %s: %r", provider["method"], text)
-            for card in cards:
-                if card.code.upper() in text or card.name.upper() in text:
+
+            candidates = cards
+            code_match = CODE_PATTERN.search(text)
+            if code_match:
+                guessed_set_id = _guess_set_id(code_match.group(1))
+                try:
+                    fetched = ensure_set_cards(db, guessed_set_id)
+                    existing_ids = {c.id for c in candidates}
+                    candidates = candidates + [c for c in fetched if c.id not in existing_ids]
+                except Exception:
+                    logger.info("No se pudo traer el set %s sugerido por la IA", guessed_set_id)
+
+            # 1ra pasada: codigo exacto (evita devolver la misma carta pero
+            # de otro set/temporada cuando el nombre coincide en varios).
+            for card in candidates:
+                if card.code.upper() in text:
                     return card, provider["method"]
-            logger.info("%s no matcheo ninguna carta del catalogo (%d cartas)", provider["method"], len(cards))
+            # 2da pasada: nombre, solo si no hubo match de codigo.
+            for card in candidates:
+                if card.name.upper() in text:
+                    return card, provider["method"]
+            logger.info("%s no matcheo ninguna carta del catalogo (%d cartas)", provider["method"], len(candidates))
         except Exception:
             logger.exception("Fallo el proveedor %s", provider["method"])
             continue
@@ -215,7 +249,7 @@ async def scan_card(
     method = "simulated"
     card = None
     if image_bytes:
-        card, ai_method = await identify_card_with_ai(image_bytes, cards)
+        card, ai_method = await identify_card_with_ai(image_bytes, cards, db)
         if card:
             method = ai_method
 
