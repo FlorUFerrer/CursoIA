@@ -55,7 +55,7 @@ const state = {
   chatMessages: [],
   chatWs: null,
   notifyWs: null,
-  unreadCount: 0,
+  unreadByListing: {},
   marketView: "all",
   myChats: null,
 };
@@ -409,33 +409,46 @@ function playNotifySound() {
   } catch (_) {}
 }
 
+function totalUnread() {
+  return Object.values(state.unreadByListing).reduce((a, b) => a + b.count, 0);
+}
+
+function updateNotifBadge() {
+  const total = totalUnread();
+  const badge = document.getElementById("notif-badge");
+  if (badge) {
+    badge.textContent = total > 9 ? "9+" : String(total);
+    badge.style.display = total > 0 ? "flex" : "none";
+  }
+}
+
 function openNotifyWs() {
   if (!isLoggedIn()) return;
-  if (state.notifyWs && state.notifyWs.readyState <= 1) return; // already open/connecting
+  if (state.notifyWs && state.notifyWs.readyState <= 1) return;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws/notify?token=${encodeURIComponent(getToken())}`);
   state.notifyWs = ws;
   ws.onmessage = (ev) => {
     const data = JSON.parse(ev.data);
     if (data.type !== "new_message") return;
-    // Don't badge if user is already viewing that exact chat
+    // Ignore if user is already viewing that exact chat
     if (state.screen === "chat" && state.chatListingId === data.listing_id) return;
-    state.unreadCount += 1;
-    // Update badge without full re-render
-    const badge = document.getElementById("notif-badge");
-    if (badge) {
-      badge.textContent = state.unreadCount > 9 ? "9+" : state.unreadCount;
-      badge.style.display = "flex";
-    } else {
-      // top bar might not have badge yet, re-render top bar only
-      topBar.innerHTML = renderTopBar();
-      bindTopBarEvents();
+    const lid = data.listing_id;
+    if (!state.unreadByListing[lid]) {
+      state.unreadByListing[lid] = {
+        count: 0,
+        card_name: data.card_name,
+        seller_id: data.seller_id,
+        seller_username: data.seller_username,
+        listing_type: data.listing_type,
+      };
     }
+    state.unreadByListing[lid].count += 1;
+    updateNotifBadge();
     playNotifySound();
   };
   ws.onclose = () => {
     state.notifyWs = null;
-    // Auto-reconnect after 5s if still logged in
     if (isLoggedIn()) setTimeout(openNotifyWs, 5000);
   };
 }
@@ -691,6 +704,8 @@ async function openChat(listingId, preloadedListing = null) {
   const listing = preloadedListing || (state.listings || []).find((l) => l.id === listingId);
   if (!listing) { showToast("Publicación no encontrada"); return; }
   closeChatWs();
+  delete state.unreadByListing[listingId];
+  updateNotifBadge();
   state.chatListingId = listingId;
   state.chatListing = listing;
   state.chatMessages = [];
@@ -751,14 +766,21 @@ function chatSummaryHtml(chat) {
   const preview = chat.last_content.length > 60
     ? chat.last_content.slice(0, 60) + "…"
     : chat.last_content;
+  const unread = state.unreadByListing[chat.listing_id];
+  const unreadBadge = unread && unread.count > 0
+    ? `<span class="notif-badge" style="position:static;margin-left:auto;flex-shrink:0">${unread.count > 9 ? "9+" : unread.count}</span>`
+    : "";
+  const bold = unread && unread.count > 0 ? "font-weight:600;" : "";
   return `
     <div class="market-card" style="cursor:pointer" data-open-chat="${chat.listing_id}"
          data-chat-card="${escapeHtml(chat.card_name)}"
          data-chat-seller="${escapeHtml(chat.seller_username)}"
          data-chat-seller-id="${chat.seller_id}"
          data-chat-type="${chat.listing_type}">
-      <div class="scan-info" style="flex:1">
-        <div class="scan-name">${escapeHtml(chat.card_name)}</div>
+      <div class="scan-info" style="flex:1;min-width:0">
+        <div class="scan-name" style="${bold}display:flex;align-items:center;gap:0.4rem">
+          ${escapeHtml(chat.card_name)}${unreadBadge}
+        </div>
         <div class="scan-set">${icon("store", "icon-inline")} ${escapeHtml(chat.seller_username)}</div>
         <div class="scan-set" style="margin-top:0.3rem;font-style:italic;opacity:0.85">"${escapeHtml(preview)}"</div>
         <div class="scan-set" style="font-size:0.7rem;margin-top:0.15rem">
@@ -1058,9 +1080,8 @@ function renderNav() {
 function renderTopBar() {
   const user = getUser();
   if (!isLoggedIn() || !user) return "";
-  const badgeHtml = state.unreadCount > 0
-    ? `<span id="notif-badge" class="notif-badge">${state.unreadCount > 9 ? "9+" : state.unreadCount}</span>`
-    : `<span id="notif-badge" class="notif-badge" style="display:none">0</span>`;
+  const total = totalUnread();
+  const badgeHtml = `<span id="notif-badge" class="notif-badge" style="${total > 0 ? "" : "display:none"}">${total > 9 ? "9+" : total}</span>`;
   return `
     <span class="top-bar-user">@${user.username}</span>
     <button class="top-bar-logout" id="btn-notify-bell" aria-label="Notificaciones" title="Notificaciones" style="position:relative">
@@ -1074,12 +1095,24 @@ function renderTopBar() {
 
 function bindTopBarEvents() {
   document.getElementById("btn-notify-bell")?.addEventListener("click", async () => {
-    state.unreadCount = 0;
-    const badge = document.getElementById("notif-badge");
-    if (badge) badge.style.display = "none";
-    state.marketView = "mychats";
-    try { state.myChats = await api("/messages/mine"); } catch { state.myChats = []; }
-    await navigate("market");
+    const unreadEntries = Object.entries(state.unreadByListing).filter(([, v]) => v.count > 0);
+    if (unreadEntries.length === 1) {
+      // Un solo chat con mensajes nuevos → abrir directo
+      const [lid, info] = unreadEntries[0];
+      const fakeListing = {
+        id: Number(lid),
+        card: { name: info.card_name },
+        seller_id: info.seller_id,
+        seller_username: info.seller_username,
+        listing_type: info.listing_type,
+      };
+      await openChat(Number(lid), fakeListing);
+    } else {
+      // Varios chats → ir a Mis chats con badges visibles
+      state.marketView = "mychats";
+      try { state.myChats = await api("/messages/mine"); } catch { state.myChats = []; }
+      await navigate("market");
+    }
   });
   document.getElementById("btn-logout-top")?.addEventListener("click", performLogout);
 }
@@ -1090,7 +1123,7 @@ function performLogout() {
   clearAuth();
   state.collection = null;
   state.stats = null;
-  state.unreadCount = 0;
+  state.unreadByListing = {};
   showToast("Sesión cerrada");
   navigate("profile");
 }

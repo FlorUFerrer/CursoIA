@@ -214,6 +214,9 @@ async def ws_chat(listing_id: int, websocket: WebSocket, token: str = Query(...)
                     other_ids.add(listing.seller_id)
 
                 card_name = listing.card.name if listing else ""
+                seller_id = listing.seller_id if listing else 0
+                seller_username = listing.seller.username if listing else ""
+                listing_type = listing.listing_type if listing else "sale"
             finally:
                 db.close()
 
@@ -224,6 +227,9 @@ async def ws_chat(listing_id: int, websocket: WebSocket, token: str = Query(...)
                 "type": "new_message",
                 "listing_id": listing_id,
                 "card_name": card_name,
+                "seller_id": seller_id,
+                "seller_username": seller_username,
+                "listing_type": listing_type,
                 "sender_username": sender_username,
                 "preview": content[:60],
             }
