@@ -29,6 +29,10 @@ def _run_migrations():
     with engine.connect() as conn:
         for stmt in [
             "ALTER TABLE tournaments ADD COLUMN cancellation_reason TEXT",
+            "ALTER TABLE users ADD COLUMN first_name TEXT",
+            "ALTER TABLE users ADD COLUMN last_name TEXT",
+            "ALTER TABLE users ADD COLUMN dni TEXT",
+            "ALTER TABLE tournament_registrations ADD COLUMN dni_used TEXT",
         ]:
             try:
                 conn.execute(text(stmt))

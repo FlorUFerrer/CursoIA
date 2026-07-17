@@ -43,9 +43,18 @@ class UserOut(BaseModel):
     username: str
     is_premium: bool = False
     is_store: bool = False
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    dni: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UserProfileUpdate(BaseModel):
+    first_name: Optional[str] = Field(default=None, max_length=80)
+    last_name: Optional[str] = Field(default=None, max_length=80)
+    dni: Optional[str] = Field(default=None, max_length=20)
 
 
 class TokenOut(BaseModel):
@@ -150,6 +159,22 @@ class TournamentOut(BaseModel):
     status: str
     cancellation_reason: Optional[str] = None
     created_at: datetime
+
+
+class RegistrationOut(BaseModel):
+    id: int
+    tournament_id: int
+    user_id: int
+    username: str
+    dni_used: Optional[str] = None
+    created_at: datetime
+
+
+class TournamentRegisterPayload(BaseModel):
+    dni: str = Field(min_length=1, max_length=20)
+    first_name: Optional[str] = Field(default=None, max_length=80)
+    last_name: Optional[str] = Field(default=None, max_length=80)
+    save_to_profile: bool = False
 
 
 class ScanOut(BaseModel):

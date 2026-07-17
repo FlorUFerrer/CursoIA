@@ -46,6 +46,7 @@ const state = {
   pendingScanCard: null,
   marketQuery: "",
   marketTypeFilter: "",
+  myRegistrationIds: [],
 };
 
 const app = document.getElementById("app");
@@ -134,6 +135,9 @@ function showToast(msg) {
 }
 
 function fieldHtml(f) {
+  if (f.type === "info") {
+    return `<p style="font-size:0.88rem;color:var(--text-muted);margin:0.25rem 0 0.75rem">${f.label}</p>`;
+  }
   if (f.type === "select") {
     const opts = (f.options || [])
       .map((o) => `<option value="${o.value}"${o.value === f.value ? " selected" : ""}>${o.label}</option>`)
@@ -141,6 +145,13 @@ function fieldHtml(f) {
     return `
       <label class="auth-label">${f.label}
         <select class="auth-input" name="${f.name}">${opts}</select>
+      </label>`;
+  }
+  if (f.type === "checkbox") {
+    return `
+      <label class="auth-label" style="flex-direction:row;align-items:center;gap:0.5rem;cursor:pointer">
+        <input type="checkbox" name="${f.name}" value="1" ${f.checked ? "checked" : ""} style="width:auto;accent-color:var(--accent)" />
+        ${f.label}
       </label>`;
   }
   if (f.type === "textarea") {
@@ -209,7 +220,9 @@ function openModal({ title, fields, confirmLabel = "Confirmar", cancelLabel = "C
       const fd = new FormData(e.target);
       const result = {};
       fields.forEach((f) => {
-        result[f.name] = fd.get(f.name);
+        if (f.type === "checkbox") result[f.name] = e.target.querySelector(`[name="${f.name}"]`)?.checked || false;
+        else if (f.type === "info") result[f.name] = null;
+        else result[f.name] = fd.get(f.name);
       });
       close(result);
     });
@@ -543,6 +556,15 @@ function renderCatalog() {
 
 function tournamentCardHtml(t, showEdit = false) {
   const isCancelled = t.status === "cancelled";
+  const user = getUser();
+  const isOrganizer = user && t.organizer_id === user.id;
+  const isRegistered = state.myRegistrationIds.includes(t.id);
+  const registerBtn =
+    !showEdit && !isCancelled && isLoggedIn() && !isOrganizer
+      ? isRegistered
+        ? `<button class="btn btn-outline btn-mini" style="color:#f87171;border-color:#f87171" data-unregister-tournament="${t.id}">Desanotarme</button>`
+        : `<button class="btn btn-primary btn-mini" data-register-tournament="${t.id}">Inscribirme</button>`
+      : "";
   const editBtns = showEdit && !isCancelled
     ? `<div class="market-actions" style="margin-top:0.5rem">
         <button class="btn btn-outline btn-mini" data-edit-tournament="${t.id}">Editar</button>
@@ -565,7 +587,7 @@ function tournamentCardHtml(t, showEdit = false) {
         ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
         ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
         ${cancelReason}
-        ${editBtns}
+        ${registerBtn || editBtns}
       </div>
     </div>`;
 }
@@ -758,6 +780,14 @@ function renderProfile() {
         <div class="stat-label">En colección</div>
       </div>
     </div>
+    <div class="premium-banner" style="margin-bottom:1rem">
+      <h3 style="margin-bottom:0.6rem">${icon("user", "icon-inline")} Datos personales</h3>
+      <div style="font-size:0.88rem;color:var(--text-muted);margin-bottom:0.75rem">
+        ${user.first_name || user.last_name ? `<div>${user.first_name || ""} ${user.last_name || ""}</div>` : ""}
+        ${user.dni ? `<div>DNI: ${user.dni}</div>` : `<div style="color:#f87171">DNI no cargado — necesario para inscribirse a torneos</div>`}
+      </div>
+      <button class="btn btn-outline" id="btn-edit-profile" style="padding:0.5rem 1rem;font-size:0.85rem">Editar datos</button>
+    </div>
     ${premiumBlock}
     <ul class="menu-list">
       ${storeMenuItem}
@@ -889,6 +919,14 @@ async function loadTorneos() {
   const user = getUser();
   if (user?.is_store) {
     await loadMyTournaments();
+  }
+  if (isLoggedIn()) {
+    try {
+      const registered = await api("/tournaments/mine-registered");
+      state.myRegistrationIds = registered.map((t) => t.id);
+    } catch {
+      state.myRegistrationIds = [];
+    }
   }
 }
 
@@ -1203,6 +1241,31 @@ function bindEvents() {
     render();
   });
 
+  document.getElementById("btn-edit-profile")?.addEventListener("click", async () => {
+    const user = getUser();
+    const result = await openModal({
+      title: "Datos personales",
+      confirmLabel: "Guardar",
+      fields: [
+        { name: "first_name", label: "Nombre", type: "text", placeholder: "Opcional", value: user?.first_name || "" },
+        { name: "last_name", label: "Apellido", type: "text", placeholder: "Opcional", value: user?.last_name || "" },
+        { name: "dni", label: "DNI", type: "text", placeholder: "Requerido para torneos", required: true, value: user?.dni || "" },
+      ],
+    });
+    if (!result) return;
+    try {
+      const updated = await api("/users/me", {
+        method: "PATCH",
+        json: { first_name: result.first_name || null, last_name: result.last_name || null, dni: result.dni || null },
+      });
+      setAuth(getToken(), updated);
+      showToast("Datos guardados");
+      render();
+    } catch (e) {
+      showToast(e.message);
+    }
+  });
+
   document.getElementById("btn-premium")?.addEventListener("click", () => {
     showToast("Premium: alertas, análisis de mazo e historial extendido");
   });
@@ -1359,6 +1422,76 @@ function bindEvents() {
         deck: "Análisis de mazo: próximamente disponible",
       };
       showToast(labels[action] || "Próximamente");
+    });
+  });
+
+  document.querySelectorAll("[data-register-tournament]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      if (!(await requireAuth("inscribirte"))) return;
+      const user = getUser();
+      let dni = user?.dni || "";
+      let firstName = user?.first_name || "";
+      let lastName = user?.last_name || "";
+      let saveToProfile = false;
+
+      if (!dni) {
+        const result = await openModal({
+          title: "Datos para la inscripción",
+          confirmLabel: "Inscribirme",
+          fields: [
+            { name: "_info", label: "Tu DNI es requerido para completar la inscripción.", type: "info" },
+            { name: "first_name", label: "Nombre", type: "text", placeholder: "Opcional", value: firstName },
+            { name: "last_name", label: "Apellido", type: "text", placeholder: "Opcional", value: lastName },
+            { name: "dni", label: "DNI", type: "text", required: true, placeholder: "Ej: 12345678" },
+            { name: "save_to_profile", label: "Guardar en mi perfil para los próximos torneos", type: "checkbox", checked: true },
+          ],
+        });
+        if (!result) return;
+        dni = result.dni;
+        firstName = result.first_name || "";
+        lastName = result.last_name || "";
+        saveToProfile = result.save_to_profile;
+      }
+
+      try {
+        await api(`/tournaments/${el.dataset.registerTournament}/register`, {
+          method: "POST",
+          json: { dni, first_name: firstName || null, last_name: lastName || null, save_to_profile: saveToProfile },
+        });
+        if (saveToProfile) {
+          const updated = await api("/users/me");
+          setAuth(getToken(), updated);
+        }
+        showToast("¡Inscripción confirmada!");
+        await loadTorneos();
+        render();
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-unregister-tournament]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const confirmed = await openModal({
+        title: "¿Desanotarte del torneo?",
+        confirmLabel: "Sí, desanotarme",
+        cancelLabel: "Cancelar",
+        fields: [
+          { name: "_info", label: "Tu plaza quedará libre y otro jugador podrá ocuparla. Esta acción no se puede deshacer.", type: "info" },
+        ],
+      });
+      if (!confirmed) return;
+      try {
+        await api(`/tournaments/${el.dataset.unregisterTournament}/register`, { method: "DELETE" });
+        showToast("Te desanotaste del torneo");
+        await loadTorneos();
+        render();
+      } catch (e) {
+        showToast(e.message);
+      }
     });
   });
 

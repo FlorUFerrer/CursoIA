@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..auth import create_access_token, get_current_user, get_user_by_username, hash_password, verify_password
 from ..database import get_db
 from ..models import CollectionItem, Scan, User
-from ..schemas import ProfileStatsOut, TokenOut, UserCreate, UserLogin, UserOut
+from ..schemas import ProfileStatsOut, TokenOut, UserCreate, UserLogin, UserOut, UserProfileUpdate
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -32,6 +32,23 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)):
+    return UserOut.model_validate(user)
+
+
+@router.patch("/me", response_model=UserOut)
+def update_profile(
+    payload: UserProfileUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.first_name is not None:
+        user.first_name = payload.first_name or None
+    if payload.last_name is not None:
+        user.last_name = payload.last_name or None
+    if payload.dni is not None:
+        user.dni = payload.dni or None
+    db.commit()
+    db.refresh(user)
     return UserOut.model_validate(user)
 
 
