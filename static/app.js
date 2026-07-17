@@ -657,7 +657,7 @@ function renderProfile() {
         <div class="stat-value">${stats.scans_count}</div>
         <div class="stat-label">Escaneos</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer" data-go="collection">
         <div class="stat-value">${stats.collection_count}</div>
         <div class="stat-label">En colección</div>
       </div>
@@ -706,7 +706,7 @@ function performLogout() {
   state.collection = null;
   state.stats = null;
   showToast("Sesión cerrada");
-  render();
+  navigate("profile");
 }
 
 function render() {
