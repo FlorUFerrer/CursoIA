@@ -183,6 +183,15 @@ class TournamentRegisterPayload(BaseModel):
     save_to_profile: bool = False
 
 
+class MessageOut(BaseModel):
+    id: int
+    listing_id: int
+    sender_id: int
+    sender_username: str
+    content: str
+    created_at: datetime
+
+
 class ScanOut(BaseModel):
     card: CardOut
     scan_id: int

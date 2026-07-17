@@ -50,6 +50,10 @@ const state = {
   myRegisteredTournaments: [],
   tournamentsUserView: "all",
   tournamentQuery: "",
+  chatListingId: null,
+  chatListing: null,
+  chatMessages: [],
+  chatWs: null,
 };
 
 const app = document.getElementById("app");
@@ -377,6 +381,21 @@ function stopCameraStream() {
   }
 }
 
+function closeChatWs() {
+  if (state.chatWs) {
+    state.chatWs.close();
+    state.chatWs = null;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function renderScanCamera() {
   return `
     <h2 class="page-title">Escanear carta</h2>
@@ -607,6 +626,23 @@ function tournamentCardHtml(t, showEdit = false) {
     </div>`;
 }
 
+async function openChat(listingId) {
+  if (!(await requireAuth("chatear"))) return;
+  const listing = (state.listings || []).find((l) => l.id === listingId);
+  if (!listing) { showToast("Publicación no encontrada"); return; }
+  closeChatWs();
+  state.chatListingId = listingId;
+  state.chatListing = listing;
+  state.chatMessages = [];
+  try {
+    state.chatMessages = await api(`/messages/${listingId}`);
+  } catch {
+    state.chatMessages = [];
+  }
+  state.screen = "chat";
+  render();
+}
+
 function marketCardHtml(l) {
   const c = l.card;
   const priceText =
@@ -619,6 +655,7 @@ function marketCardHtml(l) {
       <div class="scan-set">${l.seller_username} · ${typeLabel(l.listing_type)}</div>
       ${l.wants ? `<div class="scan-set">Busca: ${l.wants}</div>` : ""}
       ${l.featured ? '<span class="market-badge">Destacada</span>' : ""}
+      ${isLoggedIn() ? `<div class="market-actions"><button class="btn btn-outline btn-mini" data-chat="${l.id}">${icon("message-circle", "icon-inline")} Chat</button></div>` : ""}
     </div>
     <div class="scan-price-col">
       <div class="scan-price">${priceText}</div>
@@ -736,6 +773,40 @@ function renderTorneos() {
     ${tabsHtml}
     ${searchBox}
     ${list}
+  `;
+}
+
+function renderChat() {
+  const l = state.chatListing;
+  if (!l) return `<p class="page-sub">Error: no hay chat activo.</p>`;
+  const me = getUser();
+  const msgs = state.chatMessages || [];
+  const msgsHtml = msgs.length
+    ? msgs
+        .map((m) => {
+          const isMe = me && m.sender_id === me.id;
+          const time = new Date(m.created_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+          return `<div class="chat-msg ${isMe ? "chat-msg-me" : "chat-msg-other"}">
+            ${!isMe ? `<div class="chat-sender">${escapeHtml(m.sender_username)}</div>` : ""}
+            <div class="chat-bubble">${escapeHtml(m.content)}</div>
+            <div class="chat-time">${time}</div>
+          </div>`;
+        })
+        .join("")
+    : `<div class="chat-empty">Todavía no hay mensajes. ¡Sé el primero en escribir!</div>`;
+  return `
+    <div class="chat-header">
+      <button class="btn btn-outline btn-mini" data-go="market">${icon("arrow-left", "icon-inline")} Volver</button>
+      <div class="chat-header-info">
+        <div class="scan-name" style="font-size:0.95rem">${escapeHtml(l.card.name)}</div>
+        <div class="scan-set">${icon("store", "icon-inline")} ${escapeHtml(l.seller_username)}</div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages">${msgsHtml}</div>
+    <div class="chat-input-row">
+      <input class="auth-input chat-input-field" id="chat-input" placeholder="Escribí un mensaje..." autocomplete="off" />
+      <button class="btn btn-primary chat-send-btn" id="chat-send">${icon("send", "icon-inline")}</button>
+    </div>
   `;
 }
 
@@ -902,6 +973,7 @@ function render() {
     torneos: renderTorneos,
     profile: renderProfile,
     auth: renderAuth,
+    chat: renderChat,
   };
   const renderer = screens[state.screen] || renderHome;
   app.innerHTML = renderer();
@@ -1004,6 +1076,7 @@ async function loadStats() {
 }
 
 async function navigate(screen) {
+  if (screen !== "chat") closeChatWs();
   if (screen !== "scan") stopCameraStream();
   state.screen = screen;
   if (screen !== "scan") {
@@ -1083,6 +1156,13 @@ async function requireAuth(actionLabel) {
 }
 
 function bindMarketCardEvents() {
+  document.querySelectorAll("[data-chat]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      await openChat(Number(el.dataset.chat));
+    });
+  });
+
   document.querySelectorAll("[data-reserve]").forEach((el) => {
     el.addEventListener("click", async (ev) => {
       ev.stopPropagation();
@@ -1678,6 +1758,61 @@ function bindEvents() {
       }
     });
   });
+
+  // Chat screen: WebSocket connection + send events
+  if (state.screen === "chat" && state.chatListingId && isLoggedIn()) {
+    if (!state.chatWs || state.chatWs.readyState > 1) {
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(
+        `${proto}://${location.host}/ws/chat/${state.chatListingId}?token=${encodeURIComponent(getToken())}`
+      );
+      state.chatWs = ws;
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (!state.chatMessages.find((m) => m.id === msg.id)) {
+          state.chatMessages.push(msg);
+        }
+        const container = document.getElementById("chat-messages");
+        if (container) {
+          const me = getUser();
+          const isMe = me && msg.sender_id === me.id;
+          const time = new Date(msg.created_at).toLocaleTimeString("es-AR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const div = document.createElement("div");
+          div.className = `chat-msg ${isMe ? "chat-msg-me" : "chat-msg-other"}`;
+          div.innerHTML = `
+            ${!isMe ? `<div class="chat-sender">${escapeHtml(msg.sender_username)}</div>` : ""}
+            <div class="chat-bubble">${escapeHtml(msg.content)}</div>
+            <div class="chat-time">${time}</div>
+          `;
+          // Remove empty state if present
+          const empty = container.querySelector(".chat-empty");
+          if (empty) empty.remove();
+          container.appendChild(div);
+          container.scrollTop = container.scrollHeight;
+        }
+      };
+      ws.onerror = () => showToast("Error de conexión al chat");
+    }
+
+    const chatInput = document.getElementById("chat-input");
+    const chatSend = document.getElementById("chat-send");
+    const container = document.getElementById("chat-messages");
+    if (container) container.scrollTop = container.scrollHeight;
+
+    function sendChatMsg() {
+      const content = chatInput?.value?.trim();
+      if (!content || !state.chatWs || state.chatWs.readyState !== 1) return;
+      state.chatWs.send(JSON.stringify({ content }));
+      if (chatInput) chatInput.value = "";
+    }
+    chatSend?.addEventListener("click", sendChatMsg);
+    chatInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendChatMsg();
+    });
+  }
 }
 
 (async function init() {

@@ -165,3 +165,15 @@ class TournamentRegistration(Base):
 
     tournament = relationship("Tournament", back_populates="registrations")
     user = relationship("User", back_populates="tournament_registrations")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    listing_id: Mapped[int] = mapped_column(ForeignKey("listings.id"), index=True)
+    sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    sender = relationship("User", foreign_keys=[sender_id])

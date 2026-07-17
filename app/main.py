@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import text
 
 from .database import Base, SessionLocal, engine
-from .routers import cards, collection, market, tournaments, users
+from .routers import cards, collection, market, messages, tournaments, users
 from .seed import seed_database
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -61,6 +61,7 @@ app.include_router(cards.router)
 app.include_router(collection.router)
 app.include_router(market.router)
 app.include_router(tournaments.router)
+app.include_router(messages.router)
 
 
 @app.get("/api/health")
