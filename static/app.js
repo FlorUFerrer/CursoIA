@@ -44,6 +44,8 @@ const state = {
   tournamentsView: "all",
   cameraStream: null,
   pendingScanCard: null,
+  marketQuery: "",
+  marketTypeFilter: "",
 };
 
 const app = document.getElementById("app");
@@ -538,38 +540,64 @@ function tournamentCardHtml(t) {
     </div>`;
 }
 
+function marketCardHtml(l) {
+  const c = l.card;
+  const priceText =
+    l.listing_type === "trade" || l.price == null ? "Solo intercambio" : `$${formatPrice(l.price)}`;
+  return `
+  <div class="market-card" data-listing-id="${l.id}">
+    <div class="scan-thumb">${thumbHtml(c)}</div>
+    <div class="scan-info">
+      <div class="scan-name">${c.name}</div>
+      <div class="scan-set">${l.seller_username} · ${typeLabel(l.listing_type)}</div>
+      ${l.wants ? `<div class="scan-set">Busca: ${l.wants}</div>` : ""}
+      ${l.featured ? '<span class="market-badge">Destacada</span>' : ""}
+    </div>
+    <div class="scan-price-col">
+      <div class="scan-price">${priceText}</div>
+    </div>
+  </div>`;
+}
+
+function filterMarketListings() {
+  const q = state.marketQuery.toLowerCase();
+  const type = state.marketTypeFilter;
+  return (state.listings || []).filter((l) => {
+    const c = l.card;
+    const matchType = !type || l.listing_type === type;
+    const matchQ =
+      !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.set_name.toLowerCase().includes(q) ||
+      c.code.toLowerCase().includes(q) ||
+      c.rarity.toLowerCase().includes(q) ||
+      l.seller_username.toLowerCase().includes(q) ||
+      (l.wants || "").toLowerCase().includes(q);
+    return matchType && matchQ;
+  });
+}
+
 function renderMarket() {
-  const listings = (state.listings || [])
-    .map((l) => {
-      const c = l.card;
-      const priceText =
-        l.listing_type === "trade" || l.price == null ? "Solo intercambio" : `$${formatPrice(l.price)}`;
-      return `
-      <div class="market-card" data-listing-id="${l.id}">
-        <div class="scan-thumb">${thumbHtml(c)}</div>
-        <div class="scan-info">
-          <div class="scan-name">${c.name}</div>
-          <div class="scan-set">${l.seller_username} · ${typeLabel(l.listing_type)}</div>
-          ${l.wants ? `<div class="scan-set">Busca: ${l.wants}</div>` : ""}
-          ${l.featured ? '<span class="market-badge">Destacada</span>' : ""}
-          <div class="market-actions">
-            <button class="btn btn-outline btn-mini" data-reserve="${l.id}">Reservar</button>
-            <button class="btn btn-primary btn-mini" data-offer="${l.id}">Ofertar</button>
-          </div>
-        </div>
-        <div class="scan-price-col">
-          <div class="scan-price">${priceText}</div>
-        </div>
-      </div>`;
-    })
-    .join("");
+  const filtered = filterMarketListings();
+  const listHtml = filtered.length
+    ? filtered.map(marketCardHtml).join("")
+    : `<div class="empty-state"><div class="empty-icon">${icon("shopping-bag")}</div><p>No hay publicaciones que coincidan.</p></div>`;
 
   return `
     <h2 class="page-title">Mercado</h2>
     <p class="page-sub">Reservas · Ofertas · Negociación</p>
-    <div class="market-grid">
-      ${listings || `<div class="empty-state"><div class="empty-icon">${icon("shopping-bag")}</div><p>No hay publicaciones aún.</p></div>`}
+    <div class="search-box">
+      ${icon("search", "search-icon")}
+      <input class="auth-input search-input" id="market-search" placeholder="Buscar por carta, vendedor, set..." />
     </div>
+    <select class="auth-input" id="market-type-filter" style="width:100%;margin-bottom:0.75rem">
+      <option value="">Todos los tipos</option>
+      <option value="sale"${state.marketTypeFilter === "sale" ? " selected" : ""}>Venta</option>
+      <option value="trade"${state.marketTypeFilter === "trade" ? " selected" : ""}>Intercambio</option>
+      <option value="negotiable"${state.marketTypeFilter === "negotiable" ? " selected" : ""}>Negociable</option>
+      <option value="combo"${state.marketTypeFilter === "combo" ? " selected" : ""}>Combo</option>
+    </select>
+    <div class="market-grid" id="market-grid">${listHtml}</div>
     <p class="page-sub" style="margin-top:1rem;font-size:0.75rem">
       Publicá cartas desde el resultado del escaneo con el botón <strong>Publicar</strong>.
     </p>
@@ -927,6 +955,49 @@ async function requireAuth(actionLabel) {
   return false;
 }
 
+function bindMarketCardEvents() {
+  document.querySelectorAll("[data-reserve]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      if (!(await requireAuth("reservar"))) return;
+      try {
+        await api(`/market/listings/${el.dataset.reserve}/reserve`, { method: "POST" });
+        showToast("Reserva creada");
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-offer]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      if (!(await requireAuth("ofertar"))) return;
+      const result = await openModal({
+        title: "Hacer una oferta",
+        confirmLabel: "Ofertar",
+        fields: [
+          { name: "money", label: "Oferta en dinero (ARS)", type: "number", placeholder: "Opcional" },
+          { name: "cardsOffer", label: "Cartas a ofrecer", type: "text", placeholder: "Opcional" },
+        ],
+      });
+      if (!result) return;
+      try {
+        await api(`/market/listings/${el.dataset.offer}/offers`, {
+          method: "POST",
+          json: {
+            money_offer: result.money ? Number(result.money) : null,
+            cards_offer: result.cardsOffer || null,
+          },
+        });
+        showToast("Oferta enviada");
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
+}
+
 function bindEvents() {
   document.getElementById("btn-scan-hero")?.addEventListener("click", () => {
     state.screen = "scan";
@@ -1194,45 +1265,30 @@ function bindEvents() {
     });
   });
 
-  document.querySelectorAll("[data-reserve]").forEach((el) => {
-    el.addEventListener("click", async (ev) => {
-      ev.stopPropagation();
-      if (!(await requireAuth("reservar"))) return;
-      try {
-        await api(`/market/listings/${el.dataset.reserve}/reserve`, { method: "POST" });
-        showToast("Reserva creada");
-      } catch (e) {
-        showToast(e.message);
-      }
-    });
+  bindMarketCardEvents();
+
+  document.getElementById("market-search")?.addEventListener("input", (e) => {
+    state.marketQuery = e.target.value.trim();
+    const grid = document.getElementById("market-grid");
+    if (!grid) return;
+    const filtered = filterMarketListings();
+    grid.innerHTML = filtered.length
+      ? filtered.map(marketCardHtml).join("")
+      : `<div class="empty-state"><div class="empty-icon"></div><p>No hay publicaciones que coincidan.</p></div>`;
+    bindMarketCardEvents();
+    refreshIcons();
   });
 
-  document.querySelectorAll("[data-offer]").forEach((el) => {
-    el.addEventListener("click", async (ev) => {
-      ev.stopPropagation();
-      if (!(await requireAuth("ofertar"))) return;
-      const result = await openModal({
-        title: "Hacer una oferta",
-        confirmLabel: "Ofertar",
-        fields: [
-          { name: "money", label: "Oferta en dinero (ARS)", type: "number", placeholder: "Opcional" },
-          { name: "cardsOffer", label: "Cartas a ofrecer", type: "text", placeholder: "Opcional" },
-        ],
-      });
-      if (!result) return;
-      try {
-        await api(`/market/listings/${el.dataset.offer}/offers`, {
-          method: "POST",
-          json: {
-            money_offer: result.money ? Number(result.money) : null,
-            cards_offer: result.cardsOffer || null,
-          },
-        });
-        showToast("Oferta enviada");
-      } catch (e) {
-        showToast(e.message);
-      }
-    });
+  document.getElementById("market-type-filter")?.addEventListener("change", (e) => {
+    state.marketTypeFilter = e.target.value;
+    const grid = document.getElementById("market-grid");
+    if (!grid) return;
+    const filtered = filterMarketListings();
+    grid.innerHTML = filtered.length
+      ? filtered.map(marketCardHtml).join("")
+      : `<div class="empty-state"><div class="empty-icon"></div><p>No hay publicaciones que coincidan.</p></div>`;
+    bindMarketCardEvents();
+    refreshIcons();
   });
 
   document.querySelectorAll("[data-action]").forEach((el) => {
