@@ -33,6 +33,7 @@ def _run_migrations():
             "ALTER TABLE users ADD COLUMN last_name TEXT",
             "ALTER TABLE users ADD COLUMN dni TEXT",
             "ALTER TABLE tournament_registrations ADD COLUMN dni_used TEXT",
+            "ALTER TABLE tournaments ADD COLUMN max_participants INTEGER",
         ]:
             try:
                 conn.execute(text(stmt))

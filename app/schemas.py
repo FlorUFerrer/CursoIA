@@ -135,6 +135,7 @@ class TournamentCreate(BaseModel):
     description: Optional[str] = None
     event_date: Optional[str] = None
     location: Optional[str] = None
+    max_participants: Optional[int] = Field(default=None, gt=0)
 
 
 class TournamentUpdate(BaseModel):
@@ -142,6 +143,7 @@ class TournamentUpdate(BaseModel):
     description: Optional[str] = None
     event_date: Optional[str] = None
     location: Optional[str] = None
+    max_participants: Optional[int] = Field(default=None, gt=0)
 
 
 class TournamentCancel(BaseModel):
@@ -156,6 +158,8 @@ class TournamentOut(BaseModel):
     description: Optional[str] = None
     event_date: Optional[str] = None
     location: Optional[str] = None
+    max_participants: Optional[int] = None
+    participants_count: int = 0
     status: str
     cancellation_reason: Optional[str] = None
     created_at: datetime
@@ -166,6 +170,8 @@ class RegistrationOut(BaseModel):
     tournament_id: int
     user_id: int
     username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     dni_used: Optional[str] = None
     created_at: datetime
 

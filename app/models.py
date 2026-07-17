@@ -143,6 +143,7 @@ class Tournament(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     event_date: Mapped[str | None] = mapped_column(String(40), nullable=True)
     location: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    max_participants: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # active | cancelled
     status: Mapped[str] = mapped_column(String(20), default="active")
     cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -18,6 +18,8 @@ def _to_out(t: Tournament) -> TournamentOut:
         description=t.description,
         event_date=t.event_date,
         location=t.location,
+        max_participants=t.max_participants,
+        participants_count=len(t.registrations),
         status=t.status,
         cancellation_reason=t.cancellation_reason,
         created_at=t.created_at,
@@ -66,6 +68,8 @@ def update_tournament(
         t.event_date = payload.event_date
     if payload.location is not None:
         t.location = payload.location
+    if payload.max_participants is not None:
+        t.max_participants = payload.max_participants
     db.commit()
     db.refresh(t)
     return _to_out(t)
@@ -123,6 +127,8 @@ def register_tournament(
     )
     if existing:
         raise HTTPException(status_code=400, detail="Ya estás inscripto en este torneo")
+    if t.max_participants is not None and len(t.registrations) >= t.max_participants:
+        raise HTTPException(status_code=400, detail="El torneo ya alcanzó el cupo máximo")
     if payload.save_to_profile:
         user.dni = payload.dni
         if payload.first_name:
@@ -145,6 +151,32 @@ def register_tournament(
         dni_used=reg.dni_used,
         created_at=reg.created_at,
     )
+
+
+@router.get("/{tournament_id}/registrations", response_model=list[RegistrationOut])
+def list_registrations(
+    tournament_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    t = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Torneo no encontrado")
+    if t.organizer_id != user.id:
+        raise HTTPException(status_code=403, detail="Solo el organizador puede ver los inscriptos")
+    return [
+        RegistrationOut(
+            id=r.id,
+            tournament_id=r.tournament_id,
+            user_id=r.user_id,
+            username=r.user.username,
+            first_name=r.user.first_name,
+            last_name=r.user.last_name,
+            dni_used=r.dni_used,
+            created_at=r.created_at,
+        )
+        for r in t.registrations
+    ]
 
 
 @router.delete("/{tournament_id}/register", status_code=status.HTTP_204_NO_CONTENT)
@@ -178,6 +210,7 @@ def create_tournament(
         description=payload.description,
         event_date=payload.event_date,
         location=payload.location,
+        max_participants=payload.max_participants,
     )
     db.add(t)
     db.commit()

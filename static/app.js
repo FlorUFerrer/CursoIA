@@ -175,6 +175,7 @@ function fieldHtml(f) {
         type="${f.type || "text"}"
         placeholder="${f.placeholder || ""}"
         value="${f.value != null ? f.value : ""}"
+        ${f.min != null ? `min="${f.min}"` : ""}
         ${f.required ? "required" : ""}
       />
     </label>`;
@@ -559,11 +560,14 @@ function tournamentCardHtml(t, showEdit = false) {
   const user = getUser();
   const isOrganizer = user && t.organizer_id === user.id;
   const isRegistered = state.myRegistrationIds.includes(t.id);
+  const isFull = t.max_participants != null && t.participants_count >= t.max_participants;
   const registerBtn =
     !showEdit && !isCancelled && isLoggedIn() && !isOrganizer
       ? isRegistered
         ? `<button class="btn btn-outline btn-mini" style="color:#f87171;border-color:#f87171" data-unregister-tournament="${t.id}">Desanotarme</button>`
-        : `<button class="btn btn-primary btn-mini" data-register-tournament="${t.id}">Inscribirme</button>`
+        : isFull
+          ? `<span class="scan-set" style="font-size:0.8rem;color:#f87171">Cupo lleno</span>`
+          : `<button class="btn btn-primary btn-mini" data-register-tournament="${t.id}">Inscribirme</button>`
       : "";
   const editBtns = showEdit && !isCancelled
     ? `<div class="market-actions" style="margin-top:0.5rem">
@@ -582,10 +586,17 @@ function tournamentCardHtml(t, showEdit = false) {
   return `
     <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid ${borderColor}">
       <div class="scan-info" style="flex:1">
-        <div class="scan-name" style="color:${titleColor}">${t.title} ${cancelledBadge}</div>
+        <div class="scan-name" style="color:${titleColor}${showEdit ? ";cursor:pointer" : ""}" ${showEdit ? `data-tournament-detail="${t.id}"` : ""}>${t.title} ${cancelledBadge}</div>
         <div class="scan-set">${icon("store", "icon-inline")} ${t.organizer_username}${t.event_date ? ` · ${icon("calendar", "icon-inline")} ${t.event_date}` : ""}</div>
         ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
         ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
+        ${(() => {
+          const count = t.participants_count || 0;
+          const max = t.max_participants;
+          if (!max) return count > 0 ? `<div class="scan-set">${icon("users", "icon-inline")} ${count} inscripto${count !== 1 ? "s" : ""}</div>` : "";
+          const full = count >= max;
+          return `<div class="scan-set" style="${full ? "color:#f87171" : ""}">${icon("users", "icon-inline")} ${count}/${max} inscriptos${full ? " · Cupo lleno" : ""}</div>`;
+        })()}
         ${cancelReason}
         ${registerBtn || editBtns}
       </div>
@@ -666,6 +677,7 @@ function renderTorneos() {
     ? `<div class="action-row" style="margin-bottom:1rem">
         <button class="btn ${state.tournamentsView === "all" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-view="all">Todos</button>
         <button class="btn ${state.tournamentsView === "mine" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-view="mine">Mis Torneos</button>
+        <button class="btn btn-outline btn-action-row" data-action="publish-tournament">${icon("plus", "btn-icon")} Crear torneo</button>
       </div>`
     : "";
 
@@ -1394,8 +1406,9 @@ function bindEvents() {
           fields: [
             { name: "title", label: "Nombre del torneo", type: "text", required: true },
             { name: "description", label: "Descripción", type: "textarea", placeholder: "Opcional" },
-            { name: "event_date", label: "Fecha del evento", type: "date" },
+            { name: "event_date", label: "Fecha del evento", type: "date", min: new Date().toISOString().slice(0, 10) },
             { name: "location", label: "Lugar", type: "text", placeholder: "Opcional" },
+            { name: "max_participants", label: "Cupo máximo (opcional)", type: "number", placeholder: "Sin límite" },
           ],
         });
         if (!result) return;
@@ -1407,6 +1420,7 @@ function bindEvents() {
               description: result.description || null,
               event_date: result.event_date || null,
               location: result.location || null,
+              max_participants: result.max_participants ? Number(result.max_participants) : null,
             },
           });
           showToast("¡Torneo publicado! Ya aparece en la pestaña Torneos para todos los usuarios.");
@@ -1422,6 +1436,56 @@ function bindEvents() {
         deck: "Análisis de mazo: próximamente disponible",
       };
       showToast(labels[action] || "Próximamente");
+    });
+  });
+
+  document.querySelectorAll("[data-tournament-detail]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const id = Number(el.dataset.tournamentDetail);
+      const t = (state.myTournaments || []).find((x) => x.id === id);
+      if (!t) return;
+      let registrantsHtml = "<p style='color:var(--text-muted);font-size:0.88rem'>Cargando inscriptos…</p>";
+
+      // Crear overlay del modal manualmente para poder actualizar contenido
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      const cupo = t.max_participants ? `${t.participants_count}/${t.max_participants}` : `${t.participants_count}`;
+      overlay.innerHTML = `
+        <div class="modal-card" role="dialog" style="max-width:480px;max-height:80vh;overflow-y:auto">
+          <h3 class="modal-title">${t.title}</h3>
+          ${t.event_date ? `<p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.25rem">${icon("calendar","icon-inline")} ${t.event_date}</p>` : ""}
+          ${t.location ? `<p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 0.25rem">${icon("map-pin","icon-inline")} ${t.location}</p>` : ""}
+          ${t.description ? `<p style="font-size:0.85rem;margin:0.5rem 0">${t.description}</p>` : ""}
+          <p style="font-size:0.85rem;margin:0.5rem 0">${icon("users","icon-inline")} <strong>${cupo}</strong> inscripto${t.participants_count !== 1 ? "s" : ""}</p>
+          <hr style="border-color:var(--border);margin:0.75rem 0" />
+          <div id="modal-registrants">${registrantsHtml}</div>
+          <div class="modal-actions" style="margin-top:1rem">
+            <button type="button" class="btn btn-primary" data-modal-close>Cerrar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector("[data-modal-close]").addEventListener("click", () => overlay.remove());
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+
+      try {
+        const regs = await api(`/tournaments/${id}/registrations`);
+        const div = overlay.querySelector("#modal-registrants");
+        if (!regs.length) {
+          div.innerHTML = "<p style='color:var(--text-muted);font-size:0.88rem'>Nadie inscripto todavía.</p>";
+        } else {
+          div.innerHTML = `<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem">
+            ${regs.map((r) => `
+              <li style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem 0.75rem;font-size:0.85rem">
+                <strong>${r.username}</strong>${r.first_name || r.last_name ? ` — ${[r.first_name, r.last_name].filter(Boolean).join(" ")}` : ""}
+                <br><span style="color:var(--text-muted)">DNI: ${r.dni_used || "no informado"}</span>
+              </li>`).join("")}
+          </ul>`;
+        }
+        refreshIcons();
+      } catch (e) {
+        overlay.querySelector("#modal-registrants").innerHTML = `<p style="color:#f87171;font-size:0.88rem">${e.message}</p>`;
+      }
     });
   });
 
@@ -1529,8 +1593,9 @@ function bindEvents() {
         fields: [
           { name: "title", label: "Nombre del torneo", type: "text", required: true, value: t.title },
           { name: "description", label: "Descripción", type: "textarea", placeholder: "Opcional", value: t.description || "" },
-          { name: "event_date", label: "Fecha del evento", type: "date", value: t.event_date || "" },
+          { name: "event_date", label: "Fecha del evento", type: "date", value: t.event_date || "", min: new Date().toISOString().slice(0, 10) },
           { name: "location", label: "Lugar", type: "text", placeholder: "Opcional", value: t.location || "" },
+          { name: "max_participants", label: "Cupo máximo (opcional)", type: "number", placeholder: "Sin límite", value: t.max_participants || "" },
         ],
       });
       if (!result) return;
@@ -1542,6 +1607,7 @@ function bindEvents() {
             description: result.description || null,
             event_date: result.event_date || null,
             location: result.location || null,
+            max_participants: result.max_participants ? Number(result.max_participants) : null,
           },
         });
         showToast("Torneo actualizado");
