@@ -49,6 +49,7 @@ const state = {
   myRegistrationIds: [],
   myRegisteredTournaments: [],
   tournamentsUserView: "all",
+  tournamentQuery: "",
 };
 
 const app = document.getElementById("app");
@@ -705,14 +706,33 @@ function renderTorneos() {
       </div>`
     : "";
 
-  const list = tournaments.length
-    ? `<div class="market-grid">${tournaments.map((t) => tournamentCardHtml(t, showMine)).join("")}</div>`
-    : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>${emptyMsg}</p></div>`;
+  const searchBox = !showRegistered
+    ? `<div class="search-box">
+        ${icon("search", "search-icon")}
+        <input class="auth-input search-input" id="tournament-search" placeholder="Buscar por nombre, tienda o lugar..." />
+      </div>`
+    : "";
+
+  const filtered = state.tournamentQuery
+    ? tournaments.filter((t) => {
+        const q = state.tournamentQuery.toLowerCase();
+        return (
+          t.title.toLowerCase().includes(q) ||
+          t.organizer_username.toLowerCase().includes(q) ||
+          (t.location || "").toLowerCase().includes(q)
+        );
+      })
+    : tournaments;
+
+  const list = filtered.length
+    ? `<div class="market-grid" id="tournament-grid">${filtered.map((t) => tournamentCardHtml(t, showMine)).join("")}</div>`
+    : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>${tournaments.length ? "Sin resultados." : emptyMsg}</p></div>`;
 
   return `
     <h2 class="page-title">Torneos</h2>
     <p class="page-sub">${subtitle}</p>
     ${tabsHtml}
+    ${searchBox}
     ${list}
   `;
 }
@@ -1388,6 +1408,7 @@ function bindEvents() {
   document.querySelectorAll("[data-tournaments-view]").forEach((el) => {
     el.addEventListener("click", async () => {
       state.tournamentsView = el.dataset.tournamentsView;
+      state.tournamentQuery = "";
       if (state.tournamentsView === "mine" && !state.myTournaments) {
         await loadMyTournaments();
       }
@@ -1398,8 +1419,14 @@ function bindEvents() {
   document.querySelectorAll("[data-tournaments-user-view]").forEach((el) => {
     el.addEventListener("click", () => {
       state.tournamentsUserView = el.dataset.tournamentsUserView;
+      state.tournamentQuery = "";
       render();
     });
+  });
+
+  document.getElementById("tournament-search")?.addEventListener("input", (e) => {
+    state.tournamentQuery = e.target.value.trim();
+    render();
   });
 
   bindMarketCardEvents();
