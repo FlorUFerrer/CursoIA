@@ -7,3 +7,4 @@ bcrypt==4.0.1
 python-jose[cryptography]==3.5.0
 python-multipart==0.0.22
 openai==2.45.0
+python-dotenv==1.1.1

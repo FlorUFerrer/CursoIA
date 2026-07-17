@@ -42,6 +42,7 @@ const state = {
   scanSearchLoading: false,
   myTournaments: null,
   tournamentsView: "all",
+  cameraStream: null,
 };
 
 const app = document.getElementById("app");
@@ -336,6 +337,37 @@ function renderScanSearch() {
   `;
 }
 
+function stopCameraStream() {
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach((t) => t.stop());
+    state.cameraStream = null;
+  }
+}
+
+function renderScanCamera() {
+  return `
+    <h2 class="page-title">Escanear carta</h2>
+    <p class="page-sub">Apuntá la cámara a la carta y capturá</p>
+    <div class="viewfinder" id="viewfinder">
+      <div class="viewfinder-corner tl"></div>
+      <div class="viewfinder-corner tr"></div>
+      <div class="viewfinder-corner bl"></div>
+      <div class="viewfinder-corner br"></div>
+      <video id="scan-video" autoplay playsinline style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></video>
+    </div>
+    <div class="action-row" style="margin-bottom:0.75rem">
+      <button class="btn btn-primary btn-action-row" id="btn-capture">
+        ${icon("camera", "btn-icon")}
+        Capturar
+      </button>
+      <button class="btn btn-outline btn-action-row" id="btn-cancel-camera">
+        ${icon("x", "btn-icon")}
+        Cancelar
+      </button>
+    </div>
+  `;
+}
+
 function renderScanIdle() {
   const preview = state.previewUrl
     ? `<img src="${state.previewUrl}" alt="Vista previa" class="scan-preview" />`
@@ -350,11 +382,15 @@ function renderScanIdle() {
       <div class="viewfinder-corner br"></div>
       ${preview}
     </div>
-    <input type="file" id="scan-file" accept="image/*" capture="environment" hidden />
+    <input type="file" id="scan-file-gallery" accept="image/*" hidden />
     <div class="action-row" style="margin-bottom:0.75rem">
       <button class="btn btn-primary btn-action-row" id="btn-run-scan">
         ${icon("scan-line", "btn-icon")}
         Escanear
+      </button>
+      <button class="btn btn-outline btn-action-row" id="btn-upload-image">
+        ${icon("image", "btn-icon")}
+        Subir imagen
       </button>
       <button class="btn btn-outline btn-action-row" id="btn-open-search">
         ${icon("search", "btn-icon")}
@@ -411,6 +447,7 @@ function renderScanResult(card) {
 
 function renderScan() {
   if (state.scanPhase === "search") return renderScanSearch();
+  if (state.scanPhase === "camera") return renderScanCamera();
   if (state.scanPhase === "result" && state.activeCard) return renderScanResult(state.activeCard);
   if (state.scanPhase === "scanning") {
     return `
@@ -811,6 +848,7 @@ async function loadStats() {
 }
 
 async function navigate(screen) {
+  if (screen !== "scan") stopCameraStream();
   state.screen = screen;
   if (screen !== "scan") {
     state.scanPhase = "idle";
@@ -945,11 +983,47 @@ function bindEvents() {
     el.addEventListener("click", () => openCardDetail(el.dataset.cardId));
   });
 
-  document.getElementById("btn-run-scan")?.addEventListener("click", () => {
-    document.getElementById("scan-file")?.click();
+  document.getElementById("btn-run-scan")?.addEventListener("click", async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      state.cameraStream = stream;
+      state.scanPhase = "camera";
+      render();
+      const video = document.getElementById("scan-video");
+      if (video) video.srcObject = stream;
+    } catch {
+      showToast("No se pudo acceder a la cámara");
+    }
   });
 
-  document.getElementById("scan-file")?.addEventListener("change", (e) => {
+  document.getElementById("btn-capture")?.addEventListener("click", () => {
+    const video = document.getElementById("scan-video");
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    stopCameraStream();
+    canvas.toBlob((blob) => {
+      const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+      state.selectedFile = file;
+      if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+      state.previewUrl = URL.createObjectURL(blob);
+      runScan();
+    }, "image/jpeg");
+  });
+
+  document.getElementById("btn-cancel-camera")?.addEventListener("click", () => {
+    stopCameraStream();
+    state.scanPhase = "idle";
+    render();
+  });
+
+  document.getElementById("btn-upload-image")?.addEventListener("click", () => {
+    document.getElementById("scan-file-gallery")?.click();
+  });
+
+  document.getElementById("scan-file-gallery")?.addEventListener("change", (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     state.selectedFile = file;
