@@ -130,3 +130,45 @@ class TestMe:
         assert data["scans_count"] == 0
         assert data["collection_count"] == 0
         assert data["collection_value"] == 0
+
+
+class TestUpdateProfile:
+    def test_actualizar_nombre_y_apellido(self, client, auth_headers, user):
+        resp = client.patch(
+            "/api/users/me",
+            json={"first_name": "Florencia", "last_name": "García"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["first_name"] == "Florencia"
+        assert data["last_name"] == "García"
+
+    def test_actualizar_dni(self, client, auth_headers, user):
+        resp = client.patch(
+            "/api/users/me",
+            json={"dni": "30123456"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["dni"] == "30123456"
+
+    def test_actualizacion_parcial_no_borra_campos(self, client, auth_headers, user):
+        client.patch("/api/users/me", json={"first_name": "Ana"}, headers=auth_headers)
+        resp = client.patch("/api/users/me", json={"last_name": "López"}, headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["first_name"] == "Ana"
+        assert data["last_name"] == "López"
+
+    def test_requiere_autenticacion(self, client):
+        resp = client.patch("/api/users/me", json={"first_name": "X"})
+        assert resp.status_code == 401
+
+    def test_nombre_muy_largo_devuelve_422(self, client, auth_headers, user):
+        resp = client.patch(
+            "/api/users/me",
+            json={"first_name": "A" * 81},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422

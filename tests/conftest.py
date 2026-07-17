@@ -199,3 +199,39 @@ def listing(db: Session, store_user: User, card: Card) -> Listing:
     db.commit()
     db.refresh(l)
     return l
+
+
+@pytest.fixture
+def second_user(db: Session) -> User:
+    """Segundo usuario para tests de chat."""
+    u = User(username="testuser2", password_hash=hash_password("testpass456"))
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    return u
+
+@pytest.fixture
+def second_token(second_user: User) -> str:
+    return create_access_token(second_user.id, second_user.username)
+
+@pytest.fixture
+def second_auth_headers(second_token: str) -> dict:
+    return {"Authorization": f"Bearer {second_token}"}
+
+@pytest.fixture
+def tournament(db: Session, store_user: User) -> Tournament:
+    """Torneo activo de la tienda."""
+    from app.models import Tournament as TournamentModel
+    t = TournamentModel(
+        organizer_id=store_user.id,
+        title="Torneo Test OP",
+        description="Torneo de prueba",
+        event_date="2026-12-01",
+        location="Buenos Aires",
+        max_participants=10,
+        status="active",
+    )
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return t
