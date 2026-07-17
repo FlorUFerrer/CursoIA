@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
+from sqlalchemy.orm import joinedload
+
 from ..auth import ALGORITHM, SECRET_KEY, get_current_user
 from ..database import SessionLocal, get_db
-from ..models import Message, User
-from ..schemas import MessageOut
+from ..models import Listing, Message, User
+from ..schemas import ChatSummaryOut, MessageOut
 
 router = APIRouter(tags=["messages"])
 
@@ -38,6 +40,61 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
+@router.get("/api/messages/mine", response_model=list[ChatSummaryOut])
+def get_my_chats(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    sent_ids = {
+        row[0]
+        for row in db.query(Message.listing_id).filter(Message.sender_id == user.id).distinct().all()
+    }
+    seller_ids = {
+        row[0]
+        for row in db.query(Message.listing_id)
+        .join(Listing, Message.listing_id == Listing.id)
+        .filter(Listing.seller_id == user.id)
+        .distinct()
+        .all()
+    }
+    listing_ids = sent_ids | seller_ids
+    if not listing_ids:
+        return []
+
+    summaries = []
+    for lid in listing_ids:
+        last_msg = (
+            db.query(Message)
+            .filter(Message.listing_id == lid)
+            .order_by(Message.created_at.desc())
+            .first()
+        )
+        if not last_msg:
+            continue
+        listing = (
+            db.query(Listing)
+            .options(joinedload(Listing.card), joinedload(Listing.seller))
+            .filter(Listing.id == lid)
+            .first()
+        )
+        if not listing:
+            continue
+        summaries.append(
+            ChatSummaryOut(
+                listing_id=lid,
+                card_name=listing.card.name,
+                seller_id=listing.seller_id,
+                seller_username=listing.seller.username,
+                listing_type=listing.listing_type,
+                last_content=last_msg.content,
+                last_at=last_msg.created_at,
+                last_sender=last_msg.sender.username,
+            )
+        )
+    summaries.sort(key=lambda x: x.last_at, reverse=True)
+    return summaries
 
 
 @router.get("/api/messages/{listing_id}", response_model=list[MessageOut])

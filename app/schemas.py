@@ -192,6 +192,17 @@ class MessageOut(BaseModel):
     created_at: datetime
 
 
+class ChatSummaryOut(BaseModel):
+    listing_id: int
+    card_name: str
+    seller_id: int
+    seller_username: str
+    listing_type: str
+    last_content: str
+    last_at: datetime
+    last_sender: str
+
+
 class ScanOut(BaseModel):
     card: CardOut
     scan_id: int

@@ -54,6 +54,8 @@ const state = {
   chatListing: null,
   chatMessages: [],
   chatWs: null,
+  marketView: "all",
+  myChats: null,
 };
 
 const app = document.getElementById("app");
@@ -626,9 +628,9 @@ function tournamentCardHtml(t, showEdit = false) {
     </div>`;
 }
 
-async function openChat(listingId) {
+async function openChat(listingId, preloadedListing = null) {
   if (!(await requireAuth("chatear"))) return;
-  const listing = (state.listings || []).find((l) => l.id === listingId);
+  const listing = preloadedListing || (state.listings || []).find((l) => l.id === listingId);
   if (!listing) { showToast("Publicación no encontrada"); return; }
   closeChatWs();
   state.chatListingId = listingId;
@@ -681,7 +683,57 @@ function filterMarketListings() {
   });
 }
 
+function chatSummaryHtml(chat) {
+  const time = new Date(chat.last_at).toLocaleString("es-AR", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const preview = chat.last_content.length > 60
+    ? chat.last_content.slice(0, 60) + "…"
+    : chat.last_content;
+  return `
+    <div class="market-card" style="cursor:pointer" data-open-chat="${chat.listing_id}"
+         data-chat-card="${escapeHtml(chat.card_name)}"
+         data-chat-seller="${escapeHtml(chat.seller_username)}"
+         data-chat-seller-id="${chat.seller_id}"
+         data-chat-type="${chat.listing_type}">
+      <div class="scan-info" style="flex:1">
+        <div class="scan-name">${escapeHtml(chat.card_name)}</div>
+        <div class="scan-set">${icon("store", "icon-inline")} ${escapeHtml(chat.seller_username)}</div>
+        <div class="scan-set" style="margin-top:0.3rem;font-style:italic;opacity:0.85">"${escapeHtml(preview)}"</div>
+        <div class="scan-set" style="font-size:0.7rem;margin-top:0.15rem">
+          ${icon("clock", "icon-inline")} ${time} · ${escapeHtml(chat.last_sender)}
+        </div>
+      </div>
+      <div style="align-self:center;padding-left:0.5rem">${icon("chevron-right", "icon-inline")}</div>
+    </div>`;
+}
+
 function renderMarket() {
+  const showChats = isLoggedIn() && state.marketView === "mychats";
+
+  const tabs = isLoggedIn()
+    ? `<div class="action-row" style="margin-bottom:1rem">
+        <button class="btn ${state.marketView === "all" ? "btn-primary" : "btn-outline"} btn-action-row" data-market-view="all">Publicaciones</button>
+        <button class="btn ${state.marketView === "mychats" ? "btn-primary" : "btn-outline"} btn-action-row" data-market-view="mychats">${icon("message-circle", "icon-inline")} Mis chats</button>
+      </div>`
+    : "";
+
+  if (showChats) {
+    const chats = state.myChats || [];
+    const listHtml = chats.length
+      ? `<div class="market-grid">${chats.map(chatSummaryHtml).join("")}</div>`
+      : `<div class="empty-state"><div class="empty-icon">${icon("message-circle")}</div><p>Todavía no tenés conversaciones.</p></div>`;
+    return `
+      <h2 class="page-title">Mercado</h2>
+      <p class="page-sub">Tus conversaciones activas</p>
+      ${tabs}
+      ${listHtml}
+    `;
+  }
+
   const filtered = filterMarketListings();
   const listHtml = filtered.length
     ? filtered.map(marketCardHtml).join("")
@@ -690,6 +742,7 @@ function renderMarket() {
   return `
     <h2 class="page-title">Mercado</h2>
     <p class="page-sub">Reservas · Ofertas · Negociación</p>
+    ${tabs}
     <div class="search-box">
       ${icon("search", "search-icon")}
       <input class="auth-input search-input" id="market-search" placeholder="Buscar por carta, vendedor, set..." />
@@ -1509,6 +1562,34 @@ function bindEvents() {
   document.getElementById("tournament-search")?.addEventListener("input", (e) => {
     state.tournamentQuery = e.target.value.trim();
     render();
+  });
+
+  document.querySelectorAll("[data-market-view]").forEach((el) => {
+    el.addEventListener("click", async () => {
+      state.marketView = el.dataset.marketView;
+      if (state.marketView === "mychats") {
+        try {
+          state.myChats = await api("/messages/mine");
+        } catch {
+          state.myChats = [];
+        }
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-open-chat]").forEach((el) => {
+    el.addEventListener("click", async () => {
+      const listingId = Number(el.dataset.openChat);
+      const fakeListing = {
+        id: listingId,
+        card: { name: el.dataset.chatCard },
+        seller_id: Number(el.dataset.chatSellerId),
+        seller_username: el.dataset.chatSeller,
+        listing_type: el.dataset.chatType,
+      };
+      await openChat(listingId, fakeListing);
+    });
   });
 
   bindMarketCardEvents();
