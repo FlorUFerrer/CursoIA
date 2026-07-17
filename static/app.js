@@ -581,6 +581,7 @@ function tournamentCardHtml(t, showEdit = false) {
   const cancelledBadge = isCancelled
     ? `<span class="market-badge" style="background:#7f1d1d;color:#fca5a5">Cancelado</span>`
     : "";
+  const idBadge = `<span class="market-badge" style="background:#1e3a5f;color:#93c5fd;font-size:0.7rem;margin-left:0.3rem">#${t.id}</span>`;
   const cancelReason = isCancelled && t.cancellation_reason
     ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;color:#fca5a5">${icon("alert-circle", "icon-inline")} Motivo: ${t.cancellation_reason}</div>`
     : "";
@@ -589,7 +590,7 @@ function tournamentCardHtml(t, showEdit = false) {
   return `
     <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid ${borderColor}">
       <div class="scan-info" style="flex:1">
-        <div class="scan-name" style="color:${titleColor}${showEdit ? ";cursor:pointer" : ""}" ${showEdit ? `data-tournament-detail="${t.id}"` : ""}>${t.title} ${cancelledBadge}</div>
+        <div class="scan-name" style="color:${titleColor}${showEdit ? ";cursor:pointer" : ""}" ${showEdit ? `data-tournament-detail="${t.id}"` : ""}>${t.title} ${cancelledBadge}${idBadge}</div>
         <div class="scan-set">${icon("store", "icon-inline")} ${t.organizer_username}${t.event_date ? ` · ${icon("calendar", "icon-inline")} ${t.event_date}` : ""}</div>
         ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
         ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
@@ -709,17 +710,18 @@ function renderTorneos() {
   const searchBox = !showRegistered
     ? `<div class="search-box">
         ${icon("search", "search-icon")}
-        <input class="auth-input search-input" id="tournament-search" placeholder="Buscar por nombre, tienda o lugar..." />
+        <input class="auth-input search-input" id="tournament-search" placeholder="Buscar por nombre, tienda, lugar o #ID..." />
       </div>`
     : "";
 
   const filtered = state.tournamentQuery
     ? tournaments.filter((t) => {
-        const q = state.tournamentQuery.toLowerCase();
+        const q = state.tournamentQuery.toLowerCase().replace(/^#/, "");
         return (
           t.title.toLowerCase().includes(q) ||
           t.organizer_username.toLowerCase().includes(q) ||
-          (t.location || "").toLowerCase().includes(q)
+          (t.location || "").toLowerCase().includes(q) ||
+          String(t.id).includes(q)
         );
       })
     : tournaments;
