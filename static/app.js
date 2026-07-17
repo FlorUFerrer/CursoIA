@@ -415,10 +415,16 @@ function totalUnread() {
 
 function updateNotifBadge() {
   const total = totalUnread();
-  const badge = document.getElementById("nav-market-badge");
-  if (badge) {
-    badge.textContent = total > 9 ? "9+" : String(total);
-    badge.style.display = total > 0 ? "inline-flex" : "none";
+  const text = total > 9 ? "9+" : String(total);
+  const topBadge = document.getElementById("notif-badge");
+  if (topBadge) {
+    topBadge.textContent = text;
+    topBadge.style.display = total > 0 ? "flex" : "none";
+  }
+  const navBadge = document.getElementById("nav-market-badge");
+  if (navBadge) {
+    navBadge.textContent = text;
+    navBadge.style.display = total > 0 ? "inline-flex" : "none";
   }
 }
 
@@ -1092,8 +1098,13 @@ function renderNav() {
 function renderTopBar() {
   const user = getUser();
   if (!isLoggedIn() || !user) return "";
+  const total = totalUnread();
+  const badgeHtml = `<span id="notif-badge" class="notif-badge" style="${total > 0 ? "" : "display:none"}">${total > 9 ? "9+" : total}</span>`;
   return `
     <span class="top-bar-user">@${user.username}</span>
+    <button class="top-bar-logout" id="btn-notify-bell" aria-label="Notificaciones" title="Notificaciones" style="position:relative">
+      ${icon("bell")}${badgeHtml}
+    </button>
     <button class="top-bar-logout" id="btn-logout-top" aria-label="Cerrar sesión" title="Cerrar sesión">
       ${icon("log-out")}
     </button>
@@ -1101,6 +1112,24 @@ function renderTopBar() {
 }
 
 function bindTopBarEvents() {
+  document.getElementById("btn-notify-bell")?.addEventListener("click", async () => {
+    const unreadEntries = Object.entries(state.unreadByListing).filter(([, v]) => v.count > 0);
+    if (unreadEntries.length === 1) {
+      const [lid, info] = unreadEntries[0];
+      const fakeListing = {
+        id: Number(lid),
+        card: { name: info.card_name },
+        seller_id: info.seller_id,
+        seller_username: info.seller_username,
+        listing_type: info.listing_type,
+      };
+      await openChat(Number(lid), fakeListing);
+    } else {
+      state.marketView = "mychats";
+      try { state.myChats = await api("/messages/mine"); } catch { state.myChats = []; }
+      await navigate("market");
+    }
+  });
   document.getElementById("btn-logout-top")?.addEventListener("click", performLogout);
 }
 
