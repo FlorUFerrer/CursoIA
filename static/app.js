@@ -47,6 +47,8 @@ const state = {
   marketQuery: "",
   marketTypeFilter: "",
   myRegistrationIds: [],
+  myRegisteredTournaments: [],
+  tournamentsUserView: "all",
 };
 
 const app = document.getElementById("app");
@@ -670,8 +672,25 @@ function renderMarket() {
 function renderTorneos() {
   const user = getUser();
   const isStore = Boolean(user?.is_store);
+  const isLoggedInUser = isLoggedIn() && !isStore;
+
   const showMine = isStore && state.tournamentsView === "mine";
-  const tournaments = showMine ? state.myTournaments || [] : state.tournaments || [];
+  const showRegistered = isLoggedInUser && state.tournamentsUserView === "registered";
+
+  let tournaments, emptyMsg, subtitle;
+  if (showMine) {
+    tournaments = state.myTournaments || [];
+    emptyMsg = "Todavía no publicaste ningún torneo.";
+    subtitle = "Torneos que publicaste como tienda";
+  } else if (showRegistered) {
+    tournaments = state.myRegisteredTournaments || [];
+    emptyMsg = "Todavía no te inscribiste a ningún torneo.";
+    subtitle = "Torneos en los que estás anotado";
+  } else {
+    tournaments = state.tournaments || [];
+    emptyMsg = "No hay torneos activos por ahora.";
+    subtitle = "Torneos activos de tiendas asociadas";
+  }
 
   const tabsHtml = isStore
     ? `<div class="action-row" style="margin-bottom:1rem">
@@ -679,16 +698,20 @@ function renderTorneos() {
         <button class="btn ${state.tournamentsView === "mine" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-view="mine">Mis Torneos</button>
         <button class="btn btn-outline btn-action-row" data-action="publish-tournament">${icon("plus", "btn-icon")} Crear torneo</button>
       </div>`
+    : isLoggedInUser
+    ? `<div class="action-row" style="margin-bottom:1rem">
+        <button class="btn ${state.tournamentsUserView === "all" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-user-view="all">Todos</button>
+        <button class="btn ${state.tournamentsUserView === "registered" ? "btn-primary" : "btn-outline"} btn-action-row" data-tournaments-user-view="registered">Mis inscripciones</button>
+      </div>`
     : "";
 
-  const emptyMsg = showMine ? "Todavía no publicaste ningún torneo." : "No hay torneos activos por ahora.";
   const list = tournaments.length
     ? `<div class="market-grid">${tournaments.map((t) => tournamentCardHtml(t, showMine)).join("")}</div>`
     : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>${emptyMsg}</p></div>`;
 
   return `
     <h2 class="page-title">Torneos</h2>
-    <p class="page-sub">${showMine ? "Torneos que publicaste como tienda" : "Torneos activos de tiendas asociadas"}</p>
+    <p class="page-sub">${subtitle}</p>
     ${tabsHtml}
     ${list}
   `;
@@ -936,8 +959,10 @@ async function loadTorneos() {
     try {
       const registered = await api("/tournaments/mine-registered");
       state.myRegistrationIds = registered.map((t) => t.id);
+      state.myRegisteredTournaments = registered;
     } catch {
       state.myRegistrationIds = [];
+      state.myRegisteredTournaments = [];
     }
   }
 }
@@ -1366,6 +1391,13 @@ function bindEvents() {
       if (state.tournamentsView === "mine" && !state.myTournaments) {
         await loadMyTournaments();
       }
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-tournaments-user-view]").forEach((el) => {
+    el.addEventListener("click", () => {
+      state.tournamentsUserView = el.dataset.tournamentsUserView;
       render();
     });
   });
