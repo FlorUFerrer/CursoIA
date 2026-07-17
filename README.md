@@ -24,12 +24,13 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8085
 
 Abrí `http://localhost:8085`. Documentación interactiva de la API: `http://localhost:8085/docs`.
 
-## Cuenta demo
+## Cuentas de prueba
 
-- Usuario: `demo`
-- Contraseña: `demo123`
-
-También existen vendedores seed: `ColeccionAR` / `TCG_BA` (misma contraseña).
+| Usuario | Contraseña | Tipo |
+|---|---|---|
+| `usuario` | `usuario123` | Usuario premium |
+| `otrousuario` | `otrousuario123` | Usuario normal |
+| `tienda` | `tienda123` | Tienda (puede crear torneos) |
 
 ## Funcionalidades
 
@@ -39,6 +40,7 @@ También existen vendedores seed: `ColeccionAR` / `TCG_BA` (misma contraseña).
 | **Colección** | Requiere login. Guardar cartas y ver valor total. |
 | **Mercado** | Publicar (venta / intercambio / negociable / combo), reservar y ofertar. |
 | **Perfil** | Stats reales + banner premium (maqueta). |
+| **Torneos** | Las cuentas tipo tienda pueden crear torneos. Cualquier usuario puede ver los torneos activos. |
 
 ### Escaneo híbrido (IA)
 
@@ -57,24 +59,18 @@ requirements.txt
 render.yaml
 ```
 
-## Deploy en Render (gratis)
+## Deploy
 
-1. Subí el proyecto a un repositorio de **GitHub**.
-2. En [Render](https://render.com) → **New** → **Web Service** → conectá el repo.
-3. Configuración:
-   - **Runtime**: Python
-   - **Build**: `pip install -r requirements.txt`
-   - **Start**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Variables opcionales:
-   - `SECRET_KEY` (recomendado; o usá el `render.yaml` que la genera)
-   - `GEMINI_API_KEY` (solo si querés escaneo con IA real, gratis en Google AI Studio)
+La app está desplegada en **Railway**: [https://tcg-trade.up.railway.app/](https://tcg-trade.up.railway.app/)
 
-También podés usar **Blueprint** con el archivo `render.yaml` incluido.
+### Variables de entorno
 
-### Limitaciones del plan free de Render
+- `SECRET_KEY` (recomendado)
+- `GEMINI_API_KEY` (solo si querés escaneo con IA real, gratis en Google AI Studio)
 
-- La instancia se **duerme** tras ~15 min sin tráfico (la primera carga puede tardar).
-- El disco es **efímero**: SQLite se recrea en cada deploy/reinicio. El `seed` vuelve a cargar cartas y usuarios demo automáticamente.
+### Limitaciones del plan free de Railway
+
+- El disco es **efímero**: SQLite se recrea en cada deploy/reinicio. El `seed` vuelve a cargar cartas y usuarios de prueba automáticamente.
 
 ## API principal
 
@@ -86,6 +82,8 @@ También podés usar **Blueprint** con el archivo `render.yaml` incluido.
 - `GET /api/market/listings` · `POST /api/market/listings`
 - `POST /api/market/listings/{id}/reserve`
 - `POST /api/market/listings/{id}/offers`
+- `GET /api/tournaments` · `POST /api/tournaments` (requiere cuenta tienda)
+- `GET /api/tournaments/mine`
 
 ## Notas
 

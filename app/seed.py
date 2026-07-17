@@ -115,9 +115,6 @@ def _pick_default_set_id() -> str:
 
 _DEMO_USERS = [
     # (username, password, is_premium, is_store)
-    ("demo", "demo123", False, False),
-    ("ColeccionAR", "demo123", False, False),
-    ("TCG_BA", "demo123", False, False),
     ("usuario", "usuario123", True, False),
     ("otrousuario", "otrousuario123", False, False),
     ("tienda", "tienda123", False, True),
@@ -171,7 +168,7 @@ def seed_database(db: Session) -> None:
     if len(top) >= 3:
         db.add(
             Listing(
-                seller_id=users["ColeccionAR"].id,
+                seller_id=users["usuario"].id,
                 card_id=top[0].id,
                 listing_type="sale",
                 price=top[0].price,
@@ -181,7 +178,7 @@ def seed_database(db: Session) -> None:
         )
         db.add(
             Listing(
-                seller_id=users["TCG_BA"].id,
+                seller_id=users["otrousuario"].id,
                 card_id=top[1].id,
                 listing_type="trade",
                 price=None,
@@ -192,7 +189,7 @@ def seed_database(db: Session) -> None:
         )
         db.add(
             Listing(
-                seller_id=users["ColeccionAR"].id,
+                seller_id=users["usuario"].id,
                 card_id=top[2].id,
                 listing_type="combo",
                 price=top[2].price,
