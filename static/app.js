@@ -43,6 +43,7 @@ const state = {
   myTournaments: null,
   tournamentsView: "all",
   cameraStream: null,
+  pendingScanCard: null,
 };
 
 const app = document.getElementById("app");
@@ -690,7 +691,7 @@ function renderProfile() {
     <h2 class="page-title">Perfil</h2>
     <p class="page-sub">@${user?.username || "jugador"}${subtitleTag ? ` · ${subtitleTag}` : ""}</p>
     <div class="stat-grid">
-      <div class="stat-card">
+      <div class="stat-card" style="cursor:pointer" data-go="scan">
         <div class="stat-value">${stats.scans_count}</div>
         <div class="stat-label">Escaneos</div>
       </div>
@@ -920,6 +921,7 @@ async function openCardDetail(cardId) {
 async function requireAuth(actionLabel) {
   if (isLoggedIn()) return true;
   showToast(`Iniciá sesión para ${actionLabel}`);
+  if (state.activeCard) state.pendingScanCard = state.activeCard;
   state.authMode = "login";
   await navigate("profile");
   return false;
@@ -1125,6 +1127,20 @@ function bindEvents() {
       showToast(`Hola, ${data.user.username}`);
       await loadStats();
       await loadCollection();
+      if (state.pendingScanCard) {
+        const card = state.pendingScanCard;
+        state.pendingScanCard = null;
+        try {
+          await api(`/collection/${card.id}`, { method: "POST" });
+          showToast(`"${card.name}" guardada en tu colección`);
+          await loadCollection();
+        } catch {}
+        if (!state.recentScans.find((c) => c.id === card.id)) state.recentScans.unshift(card);
+        state.screen = "scan";
+        state.activeCard = card;
+        state.scanPhase = "result";
+        state.scanMethod = card.scanMethod || null;
+      }
       render();
     } catch (err) {
       showToast(err.message);
