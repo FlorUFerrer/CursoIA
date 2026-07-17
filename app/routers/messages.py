@@ -2,9 +2,7 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
-
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import Session, joinedload
 
 from ..auth import ALGORITHM, SECRET_KEY, get_current_user
 from ..database import SessionLocal, get_db
@@ -39,7 +37,35 @@ class ConnectionManager:
             self.disconnect(listing_id, ws)
 
 
+class NotifyManager:
+    """One persistent WS per logged-in user for cross-chat notifications."""
+
+    def __init__(self):
+        self.connections: dict[int, list[WebSocket]] = defaultdict(list)
+
+    async def connect(self, user_id: int, ws: WebSocket):
+        await ws.accept()
+        self.connections[user_id].append(ws)
+
+    def disconnect(self, user_id: int, ws: WebSocket):
+        try:
+            self.connections[user_id].remove(ws)
+        except ValueError:
+            pass
+
+    async def notify(self, user_id: int, data: dict):
+        dead = []
+        for ws in list(self.connections[user_id]):
+            try:
+                await ws.send_json(data)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(user_id, ws)
+
+
 manager = ConnectionManager()
+notify_manager = NotifyManager()
 
 
 @router.get("/api/messages/mine", response_model=list[ChatSummaryOut])
@@ -122,6 +148,26 @@ def get_messages(
     ]
 
 
+@router.websocket("/ws/notify")
+async def ws_notify(websocket: WebSocket, token: str = Query(...)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub", 0))
+    except (JWTError, ValueError):
+        await websocket.close(code=1008)
+        return
+
+    await notify_manager.connect(user_id, websocket)
+    try:
+        while True:
+            # Keep-alive: ignore anything the client sends
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        notify_manager.disconnect(user_id, websocket)
+    except Exception:
+        notify_manager.disconnect(user_id, websocket)
+
+
 @router.websocket("/ws/chat/{listing_id}")
 async def ws_chat(listing_id: int, websocket: WebSocket, token: str = Query(...)):
     try:
@@ -139,6 +185,7 @@ async def ws_chat(listing_id: int, websocket: WebSocket, token: str = Query(...)
             content = (data.get("content") or "").strip()
             if not content:
                 continue
+
             db = SessionLocal()
             try:
                 msg = Message(listing_id=listing_id, sender_id=user_id, content=content)
@@ -153,9 +200,36 @@ async def ws_chat(listing_id: int, websocket: WebSocket, token: str = Query(...)
                     "content": content,
                     "created_at": msg.created_at.isoformat(),
                 }
+
+                # Collect participants to notify (everyone in this chat except sender)
+                other_ids = {
+                    row[0]
+                    for row in db.query(Message.sender_id)
+                    .filter(Message.listing_id == listing_id, Message.sender_id != user_id)
+                    .distinct()
+                    .all()
+                }
+                listing = db.query(Listing).filter(Listing.id == listing_id).first()
+                if listing and listing.seller_id != user_id:
+                    other_ids.add(listing.seller_id)
+
+                card_name = listing.card.name if listing else ""
             finally:
                 db.close()
+
             await manager.broadcast(listing_id, out)
+
+            # Push notification to participants not currently viewing this chat
+            notify_payload = {
+                "type": "new_message",
+                "listing_id": listing_id,
+                "card_name": card_name,
+                "sender_username": sender_username,
+                "preview": content[:60],
+            }
+            for uid in other_ids:
+                await notify_manager.notify(uid, notify_payload)
+
     except WebSocketDisconnect:
         manager.disconnect(listing_id, websocket)
     except Exception:

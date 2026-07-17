@@ -54,6 +54,8 @@ const state = {
   chatListing: null,
   chatMessages: [],
   chatWs: null,
+  notifyWs: null,
+  unreadCount: 0,
   marketView: "all",
   myChats: null,
 };
@@ -387,6 +389,62 @@ function closeChatWs() {
   if (state.chatWs) {
     state.chatWs.close();
     state.chatWs = null;
+  }
+}
+
+function playNotifySound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (_) {}
+}
+
+function openNotifyWs() {
+  if (!isLoggedIn()) return;
+  if (state.notifyWs && state.notifyWs.readyState <= 1) return; // already open/connecting
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${proto}://${location.host}/ws/notify?token=${encodeURIComponent(getToken())}`);
+  state.notifyWs = ws;
+  ws.onmessage = (ev) => {
+    const data = JSON.parse(ev.data);
+    if (data.type !== "new_message") return;
+    // Don't badge if user is already viewing that exact chat
+    if (state.screen === "chat" && state.chatListingId === data.listing_id) return;
+    state.unreadCount += 1;
+    // Update badge without full re-render
+    const badge = document.getElementById("notif-badge");
+    if (badge) {
+      badge.textContent = state.unreadCount > 9 ? "9+" : state.unreadCount;
+      badge.style.display = "flex";
+    } else {
+      // top bar might not have badge yet, re-render top bar only
+      topBar.innerHTML = renderTopBar();
+      bindTopBarEvents();
+    }
+    playNotifySound();
+  };
+  ws.onclose = () => {
+    state.notifyWs = null;
+    // Auto-reconnect after 5s if still logged in
+    if (isLoggedIn()) setTimeout(openNotifyWs, 5000);
+  };
+}
+
+function closeNotifyWs() {
+  if (state.notifyWs) {
+    state.notifyWs.onclose = null; // prevent auto-reconnect
+    state.notifyWs.close();
+    state.notifyWs = null;
   }
 }
 
@@ -1000,18 +1058,39 @@ function renderNav() {
 function renderTopBar() {
   const user = getUser();
   if (!isLoggedIn() || !user) return "";
+  const badgeHtml = state.unreadCount > 0
+    ? `<span id="notif-badge" class="notif-badge">${state.unreadCount > 9 ? "9+" : state.unreadCount}</span>`
+    : `<span id="notif-badge" class="notif-badge" style="display:none">0</span>`;
   return `
     <span class="top-bar-user">@${user.username}</span>
+    <button class="top-bar-logout" id="btn-notify-bell" aria-label="Notificaciones" title="Notificaciones" style="position:relative">
+      ${icon("bell")}${badgeHtml}
+    </button>
     <button class="top-bar-logout" id="btn-logout-top" aria-label="Cerrar sesión" title="Cerrar sesión">
       ${icon("log-out")}
     </button>
   `;
 }
 
+function bindTopBarEvents() {
+  document.getElementById("btn-notify-bell")?.addEventListener("click", async () => {
+    state.unreadCount = 0;
+    const badge = document.getElementById("notif-badge");
+    if (badge) badge.style.display = "none";
+    state.marketView = "mychats";
+    try { state.myChats = await api("/messages/mine"); } catch { state.myChats = []; }
+    await navigate("market");
+  });
+  document.getElementById("btn-logout-top")?.addEventListener("click", performLogout);
+}
+
 function performLogout() {
+  closeNotifyWs();
+  closeChatWs();
   clearAuth();
   state.collection = null;
   state.stats = null;
+  state.unreadCount = 0;
   showToast("Sesión cerrada");
   navigate("profile");
 }
@@ -1032,6 +1111,7 @@ function render() {
   app.innerHTML = renderer();
   renderNav();
   topBar.innerHTML = renderTopBar();
+  bindTopBarEvents();
   bindEvents();
   refreshIcons();
 }
@@ -1464,8 +1544,6 @@ function bindEvents() {
 
   document.getElementById("btn-go-auth")?.addEventListener("click", () => navigate("profile"));
 
-  document.getElementById("btn-logout-top")?.addEventListener("click", performLogout);
-
   document.getElementById("btn-toggle-auth")?.addEventListener("click", () => {
     state.authMode = state.authMode === "login" ? "register" : "login";
     render();
@@ -1480,6 +1558,7 @@ function bindEvents() {
     try {
       const data = await api(path, { method: "POST", json: { username, password } });
       setAuth(data.access_token, data.user);
+      openNotifyWs();
       showToast(`Hola, ${data.user.username}`);
       await loadStats();
       await loadCollection();
@@ -1898,6 +1977,7 @@ function bindEvents() {
 
 (async function init() {
   await loadHomeData();
+  openNotifyWs(); // reconnect notify WS if already logged in (page refresh)
   render();
 
   // Precarga el set por defecto del catálogo en segundo plano, para que el
