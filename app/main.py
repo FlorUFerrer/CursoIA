@@ -9,6 +9,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 
 from .database import Base, SessionLocal, engine
 from .routers import cards, collection, market, tournaments, users
@@ -24,9 +25,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
 
+def _run_migrations():
+    with engine.connect() as conn:
+        for stmt in [
+            "ALTER TABLE tournaments ADD COLUMN cancellation_reason TEXT",
+        ]:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                pass  # columna ya existe
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     db = SessionLocal()
     try:
         seed_database(db)

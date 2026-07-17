@@ -143,6 +143,19 @@ function fieldHtml(f) {
         <select class="auth-input" name="${f.name}">${opts}</select>
       </label>`;
   }
+  if (f.type === "textarea") {
+    return `
+      <label class="auth-label">${f.label}
+        <textarea
+          class="auth-input"
+          name="${f.name}"
+          placeholder="${f.placeholder || ""}"
+          rows="3"
+          style="resize:vertical"
+          ${f.required ? "required" : ""}
+        >${f.value != null ? f.value : ""}</textarea>
+      </label>`;
+  }
   return `
     <label class="auth-label">${f.label}
       <input
@@ -528,14 +541,31 @@ function renderCatalog() {
   `;
 }
 
-function tournamentCardHtml(t) {
+function tournamentCardHtml(t, showEdit = false) {
+  const isCancelled = t.status === "cancelled";
+  const editBtns = showEdit && !isCancelled
+    ? `<div class="market-actions" style="margin-top:0.5rem">
+        <button class="btn btn-outline btn-mini" data-edit-tournament="${t.id}">Editar</button>
+        <button class="btn btn-mini" style="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b" data-cancel-tournament="${t.id}">Cancelar torneo</button>
+      </div>`
+    : "";
+  const cancelledBadge = isCancelled
+    ? `<span class="market-badge" style="background:#7f1d1d;color:#fca5a5">Cancelado</span>`
+    : "";
+  const cancelReason = isCancelled && t.cancellation_reason
+    ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;color:#fca5a5">${icon("alert-circle", "icon-inline")} Motivo: ${t.cancellation_reason}</div>`
+    : "";
+  const borderColor = isCancelled ? "#7f1d1d" : "#f59e0b33";
+  const titleColor = isCancelled ? "#fca5a5" : "#f59e0b";
   return `
-    <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #f59e0b33">
+    <div class="market-card" style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid ${borderColor}">
       <div class="scan-info" style="flex:1">
-        <div class="scan-name" style="color:#f59e0b">${t.title}</div>
+        <div class="scan-name" style="color:${titleColor}">${t.title} ${cancelledBadge}</div>
         <div class="scan-set">${icon("store", "icon-inline")} ${t.organizer_username}${t.event_date ? ` · ${icon("calendar", "icon-inline")} ${t.event_date}` : ""}</div>
         ${t.location ? `<div class="scan-set">${icon("map-pin", "icon-inline")} ${t.location}</div>` : ""}
         ${t.description ? `<div class="scan-set" style="margin-top:0.3rem;font-size:0.78rem;opacity:0.85">${t.description}</div>` : ""}
+        ${cancelReason}
+        ${editBtns}
       </div>
     </div>`;
 }
@@ -619,7 +649,7 @@ function renderTorneos() {
 
   const emptyMsg = showMine ? "Todavía no publicaste ningún torneo." : "No hay torneos activos por ahora.";
   const list = tournaments.length
-    ? `<div class="market-grid">${tournaments.map(tournamentCardHtml).join("")}</div>`
+    ? `<div class="market-grid">${tournaments.map((t) => tournamentCardHtml(t, showMine)).join("")}</div>`
     : `<div class="empty-state"><div class="empty-icon">${icon("trophy")}</div><p>${emptyMsg}</p></div>`;
 
   return `
@@ -1300,7 +1330,7 @@ function bindEvents() {
           confirmLabel: "Publicar",
           fields: [
             { name: "title", label: "Nombre del torneo", type: "text", required: true },
-            { name: "description", label: "Descripción", type: "text", placeholder: "Opcional" },
+            { name: "description", label: "Descripción", type: "textarea", placeholder: "Opcional" },
             { name: "event_date", label: "Fecha del evento", type: "date" },
             { name: "location", label: "Lugar", type: "text", placeholder: "Opcional" },
           ],
@@ -1329,6 +1359,63 @@ function bindEvents() {
         deck: "Análisis de mazo: próximamente disponible",
       };
       showToast(labels[action] || "Próximamente");
+    });
+  });
+
+  document.querySelectorAll("[data-cancel-tournament]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const id = Number(el.dataset.cancelTournament);
+      const result = await openModal({
+        title: "Cancelar torneo",
+        confirmLabel: "Confirmar cancelación",
+        fields: [
+          { name: "reason", label: "Motivo de cancelación", type: "text", required: true, placeholder: "Ej: falta de inscriptos, problema de local..." },
+        ],
+      });
+      if (!result) return;
+      try {
+        await api(`/tournaments/${id}/cancel`, { method: "POST", json: { reason: result.reason } });
+        showToast("Torneo cancelado");
+        await navigate("torneos");
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-edit-tournament]").forEach((el) => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const id = Number(el.dataset.editTournament);
+      const t = (state.myTournaments || []).find((x) => x.id === id);
+      if (!t) return;
+      const result = await openModal({
+        title: "Editar torneo",
+        confirmLabel: "Guardar",
+        fields: [
+          { name: "title", label: "Nombre del torneo", type: "text", required: true, value: t.title },
+          { name: "description", label: "Descripción", type: "textarea", placeholder: "Opcional", value: t.description || "" },
+          { name: "event_date", label: "Fecha del evento", type: "date", value: t.event_date || "" },
+          { name: "location", label: "Lugar", type: "text", placeholder: "Opcional", value: t.location || "" },
+        ],
+      });
+      if (!result) return;
+      try {
+        await api(`/tournaments/${id}`, {
+          method: "PATCH",
+          json: {
+            title: result.title || undefined,
+            description: result.description || null,
+            event_date: result.event_date || null,
+            location: result.location || null,
+          },
+        });
+        showToast("Torneo actualizado");
+        await navigate("torneos");
+      } catch (e) {
+        showToast(e.message);
+      }
     });
   });
 }

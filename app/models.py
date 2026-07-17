@@ -141,6 +141,7 @@ class Tournament(Base):
     location: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # active | cancelled
     status: Mapped[str] = mapped_column(String(20), default="active")
+    cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     organizer = relationship("User", back_populates="tournaments")

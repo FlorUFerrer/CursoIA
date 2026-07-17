@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(netstat -ano)",
+      "Bash(taskkill:*)",
+      "Bash(curl -s -X POST http://localhost:8085/api/users/login -H \"Content-Type: application/json\" -d '{\"\"username\"\":\"\"usuario\"\",\"\"password\"\":\"\"usuario123\"\"}')",
+      "Bash(curl -s -X POST http://localhost:8085/api/users/login -H \"Content-Type: application/json\" -d '{\"\"username\"\":\"\"tienda\"\",\"\"password\"\":\"\"tienda123\"\"}')",
+      "Bash(curl -s http://localhost:8085/static/app.js)"
+    ]
+  }
+}

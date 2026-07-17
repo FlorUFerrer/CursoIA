@@ -128,6 +128,17 @@ class TournamentCreate(BaseModel):
     location: Optional[str] = None
 
 
+class TournamentUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=3, max_length=120)
+    description: Optional[str] = None
+    event_date: Optional[str] = None
+    location: Optional[str] = None
+
+
+class TournamentCancel(BaseModel):
+    reason: str = Field(min_length=5, max_length=300)
+
+
 class TournamentOut(BaseModel):
     id: int
     organizer_id: int
@@ -137,6 +148,7 @@ class TournamentOut(BaseModel):
     event_date: Optional[str] = None
     location: Optional[str] = None
     status: str
+    cancellation_reason: Optional[str] = None
     created_at: datetime
 
 
