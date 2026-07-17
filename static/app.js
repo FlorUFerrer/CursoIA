@@ -415,10 +415,10 @@ function totalUnread() {
 
 function updateNotifBadge() {
   const total = totalUnread();
-  const badge = document.getElementById("notif-badge");
+  const badge = document.getElementById("nav-market-badge");
   if (badge) {
     badge.textContent = total > 9 ? "9+" : String(total);
-    badge.style.display = total > 0 ? "flex" : "none";
+    badge.style.display = total > 0 ? "inline-flex" : "none";
   }
 }
 
@@ -802,7 +802,12 @@ function renderMarket() {
     : "";
 
   if (showChats) {
-    const chats = state.myChats || [];
+    const chats = [...(state.myChats || [])].sort((a, b) => {
+      const aU = (state.unreadByListing[a.listing_id]?.count || 0) > 0;
+      const bU = (state.unreadByListing[b.listing_id]?.count || 0) > 0;
+      if (aU !== bU) return aU ? -1 : 1;
+      return new Date(b.last_at) - new Date(a.last_at);
+    });
     const listHtml = chats.length
       ? `<div class="market-grid">${chats.map(chatSummaryHtml).join("")}</div>`
       : `<div class="empty-state"><div class="empty-icon">${icon("message-circle")}</div><p>Todavía no tenés conversaciones.</p></div>`;
@@ -1059,12 +1064,19 @@ function renderProfile() {
 }
 
 function renderNav() {
+  const total = totalUnread();
   const items = NAV_ITEMS.map((item) => {
     const active = state.screen === item.id;
+    const badge = item.id === "market" && total > 0
+      ? `<span id="nav-market-badge" class="nav-badge">${total > 9 ? "9+" : total}</span>`
+      : item.id === "market"
+        ? `<span id="nav-market-badge" class="nav-badge" style="display:none">0</span>`
+        : "";
     return `
-    <button class="nav-item${active ? " active" : ""}" data-nav="${item.id}" aria-label="${item.label}" aria-current="${active ? "page" : "false"}">
+    <button class="nav-item${active ? " active" : ""}" data-nav="${item.id}" aria-label="${item.label}" aria-current="${active ? "page" : "false"}" style="position:relative">
       ${icon(item.icon, "nav-icon")}
       <span>${item.label}</span>
+      ${badge}
     </button>`;
   }).join("");
 
@@ -1080,13 +1092,8 @@ function renderNav() {
 function renderTopBar() {
   const user = getUser();
   if (!isLoggedIn() || !user) return "";
-  const total = totalUnread();
-  const badgeHtml = `<span id="notif-badge" class="notif-badge" style="${total > 0 ? "" : "display:none"}">${total > 9 ? "9+" : total}</span>`;
   return `
     <span class="top-bar-user">@${user.username}</span>
-    <button class="top-bar-logout" id="btn-notify-bell" aria-label="Notificaciones" title="Notificaciones" style="position:relative">
-      ${icon("bell")}${badgeHtml}
-    </button>
     <button class="top-bar-logout" id="btn-logout-top" aria-label="Cerrar sesión" title="Cerrar sesión">
       ${icon("log-out")}
     </button>
@@ -1094,26 +1101,6 @@ function renderTopBar() {
 }
 
 function bindTopBarEvents() {
-  document.getElementById("btn-notify-bell")?.addEventListener("click", async () => {
-    const unreadEntries = Object.entries(state.unreadByListing).filter(([, v]) => v.count > 0);
-    if (unreadEntries.length === 1) {
-      // Un solo chat con mensajes nuevos → abrir directo
-      const [lid, info] = unreadEntries[0];
-      const fakeListing = {
-        id: Number(lid),
-        card: { name: info.card_name },
-        seller_id: info.seller_id,
-        seller_username: info.seller_username,
-        listing_type: info.listing_type,
-      };
-      await openChat(Number(lid), fakeListing);
-    } else {
-      // Varios chats → ir a Mis chats con badges visibles
-      state.marketView = "mychats";
-      try { state.myChats = await api("/messages/mine"); } catch { state.myChats = []; }
-      await navigate("market");
-    }
-  });
   document.getElementById("btn-logout-top")?.addEventListener("click", performLogout);
 }
 
@@ -1649,7 +1636,14 @@ function bindEvents() {
   });
 
   document.querySelectorAll("[data-nav]").forEach((el) => {
-    el.addEventListener("click", () => navigate(el.dataset.nav));
+    el.addEventListener("click", async () => {
+      const screen = el.dataset.nav;
+      if (screen === "market" && totalUnread() > 0) {
+        state.marketView = "mychats";
+        try { state.myChats = await api("/messages/mine"); } catch { state.myChats = []; }
+      }
+      await navigate(screen);
+    });
   });
 
   document.querySelectorAll("[data-tournaments-view]").forEach((el) => {

@@ -891,7 +891,27 @@ body {
 .market-actions { margin-top: 0.35rem; display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .scan-preview { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
 
-/* Notification badge */
+/* Nav item unread badge */
+.nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Notification badge (inline, e.g. chat list) */
 .notif-badge {
   position: absolute;
   top: -3px;
